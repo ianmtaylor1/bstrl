@@ -1,12 +1,20 @@
 Package: bstrl
-Title: What the Package Does (One Line, Title Case)
+Title: Bayesian Streaming Record Linkage
 Version: 0.0.0.9000
-Authors@R: 
-    person(given = "First",
-           family = "Last",
+Authors@R: c(
+    person(given = "Brenda",
+           family = "Betancourt",
+           role = c("aut"),
+           email = "bbetancourt@ufl.edu"),
+    person(given = "Andee",
+           family = "Kaplan",
+           role = c("aut"),
+           email = "andee.kaplan@colostate.edu"),
+    person(given = "Ian",
+           family = "Taylor",
            role = c("aut", "cre"),
-           email = "first.last@example.com",
-           comment = c(ORCID = "YOUR-ORCID-ID"))
+           email = "ian.taylor@colostate.edu")
+    )
 Description: What the package does (one paragraph).
 License: `use_mit_license()`, `use_gpl3_license()` or friends to
     pick a license
@@ -14,3 +22,5 @@ Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.1
+Imports:
+    BRL
