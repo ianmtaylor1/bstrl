@@ -70,13 +70,17 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
     u.curr <- u.samples[,i]
     Z.curr <- Z.samples[,i]
     # 5.2: Propose new Z2
-    Z2.prop <- draw.Z2.local(n1, n2, n3, Z.curr, Z2.curr)
+    tmp <- draw.Z2.informed(n1, n2, n3, Z, Z2.curr, m, u,
+                            cmpdata.1to3$comparisons, cmpdata.2to3$comparisons,
+                            trace=trace)
+    Z2.prop <- tmp$Z2
     # Decide whether to accept new values
     log.alpha2 <- (
       ell(cmpdata.1to3$comparisons, cmpdata.2to3$comparisons, n1, n2, n3, m.curr, u.curr, Z.curr, Z2.prop)
       - ell(cmpdata.1to3$comparisons, cmpdata.2to3$comparisons, n1, n2, n3, m.curr, u.curr, Z.curr, Z2.curr)
       + calc.log.Z2prior(n1, n2, n3, Z2.prop, Z.curr, aBM, bBM)
       - calc.log.Z2prior(n1, n2, n3, Z2.curr, Z.curr, aBM, bBM)
+      + log(tmp$mod) # Modifier for proposal probability from the informed proposal
     )
     if (-rexp(1) < log.alpha2) {
       # accept
