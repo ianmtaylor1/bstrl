@@ -13,23 +13,20 @@ calc.log.lkl <- function(cmp.1to3, cmp.2to3, n1, n2, n3, m, u, Z, Z2) {
   #                 ((what records in file 3 have links in file 2?) - 1) * n2
   #                 + (what records in file 2 are they linked to?)
   # 2. Which rows of cmp.2to3 are not candidate links?
-  # Any pairs (i,j) where i is a record in file 2 with a link in file 1
+  # Any pairs (i,j) where i is a record in file 1 with a link in file 2, and j
+  # is *any* record in file 3.
   noncand.1to3 <- c(outer((seq_len(n3) - 1) * n1, Z[Z <= n1], "+"))
-  # Multiply each comparison matrix by log(m) and log(u), filter rows later
-  lmprob.1to3 <- c(cmp.1to3 %*% log(m))
-  luprob.1to3 <- c(cmp.1to3 %*% log(u))
-  lmprob.2to3 <- c(cmp.2to3 %*% log(m))
-  luprob.2to3 <- c(cmp.2to3 %*% log(u))
-  # Filter to matches and nonmatches, appropriately, add the log probabilities of each
-  nonmatchrows.1to3 <- setdiff(seq_len(nrow(cmp.1to3)), c(matchrows.1to3, noncand.1to3))
-  nonmatchrows.2to3 <- setdiff(seq_len(nrow(cmp.2to3)), matchrows.2to3)
+  # 3. Compute filtered column sums: for match and nonmatch pairs, how many times
+  #    does a given level of a given field appear?
+  total.count <- colSums(cmp.1to3) + colSums(cmp.2to3)
+  match.count <- colSums(cmp.1to3[matchrows.1to3,,drop=FALSE]) + colSums(cmp.2to3[matchrows.2to3,,drop=FALSE])
+  nonmatch.count <- total.count - match.count - colSums(cmp.1to3[noncand.1to3,,drop=FALSE])
+  # 4. Calculate and return log likelihood based on count of field levels for
+  #    matches and non-matches
   loglkl <- (
-    sum(lmprob.1to3[matchrows.1to3])
-    + sum(luprob.1to3[nonmatchrows.1to3])
-    + sum(lmprob.2to3[matchrows.2to3])
-    + sum(luprob.2to3[nonmatchrows.2to3])
+    sum(match.count * log(m))
+    + sum(nonmatch.count * log(u))
   )
-  # Exponentiate the log likelihood and return
   return(loglkl)
 }
 
@@ -52,21 +49,17 @@ calc.log.lkl.tracing <- function(cmp.1to3, cmp.2to3, n1, n2, n3, m, u, Z, Z2) {
   matchrows.1to3 <- (which(Z2.traced <= n1) - 1) * n1 + Z2.traced[Z2.traced <= n1]
   #                 ((what records in file 3 have links in file 1?) - 1) * n1
   #                 + (what records in file 1 are they linked to?)
-  # Multiply each comparison matrix by log(m) and log(u), filter rows later
-  lmprob.1to3 <- c(cmp.1to3 %*% log(m))
-  luprob.1to3 <- c(cmp.1to3 %*% log(u))
-  lmprob.2to3 <- c(cmp.2to3 %*% log(m))
-  luprob.2to3 <- c(cmp.2to3 %*% log(u))
-  # Filter to matches and nonmatches, appropriately, add the log probabilities of each
-  nonmatchrows.1to3 <- setdiff(seq_len(nrow(cmp.1to3)), matchrows.1to3)
-  nonmatchrows.2to3 <- setdiff(seq_len(nrow(cmp.2to3)), matchrows.2to3)
+  # 3. Compute filtered column sums: for match and nonmatch pairs, how many times
+  #    does a given level of a given field appear?
+  total.count <- colSums(cmp.1to3) + colSums(cmp.2to3)
+  match.count <- colSums(cmp.1to3[matchrows.1to3,,drop=FALSE]) + colSums(cmp.2to3[matchrows.2to3,,drop=FALSE])
+  nonmatch.count <- total.count - match.count # (no need to remove non-candidiates when link tracing)
+  # 4. Calculate and return log likelihood based on count of field levels for
+  #    matches and non-matches
   loglkl <- (
-    sum(lmprob.1to3[matchrows.1to3])
-    + sum(luprob.1to3[nonmatchrows.1to3])
-    + sum(lmprob.2to3[matchrows.2to3])
-    + sum(luprob.2to3[nonmatchrows.2to3])
+    sum(match.count * log(m))
+    + sum(nonmatch.count * log(u))
   )
-  # Exponentiate the log likelihood and return
   return(loglkl)
 }
 
