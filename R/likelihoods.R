@@ -18,7 +18,7 @@ calc.log.lkl <- function(cmp.1to3, cmp.2to3, n1, n2, n3, m, u, Z, Z2) {
   noncand.1to3 <- c(outer((seq_len(n3) - 1) * n1, Z[Z <= n1], "+"))
   # 3. Compute filtered column sums: for match and nonmatch pairs, how many times
   #    does a given level of a given field appear?
-  total.count <- colSums(cmp.1to3) + colSums(cmp.2to3)
+  total.count <- attr(cmp.1to3, "totals") + attr(cmp.2to3, "totals")
   match.count <- colSums(cmp.1to3[matchrows.1to3,,drop=FALSE]) + colSums(cmp.2to3[matchrows.2to3,,drop=FALSE])
   nonmatch.count <- total.count - match.count - colSums(cmp.1to3[noncand.1to3,,drop=FALSE])
   # 4. Calculate and return log likelihood based on count of field levels for
@@ -51,7 +51,7 @@ calc.log.lkl.tracing <- function(cmp.1to3, cmp.2to3, n1, n2, n3, m, u, Z, Z2) {
   #                 + (what records in file 1 are they linked to?)
   # 3. Compute filtered column sums: for match and nonmatch pairs, how many times
   #    does a given level of a given field appear?
-  total.count <- colSums(cmp.1to3) + colSums(cmp.2to3)
+  total.count <- attr(cmp.1to3, "totals") + attr(cmp.2to3, "totals")
   match.count <- colSums(cmp.1to3[matchrows.1to3,,drop=FALSE]) + colSums(cmp.2to3[matchrows.2to3,,drop=FALSE])
   nonmatch.count <- total.count - match.count # (no need to remove non-candidiates when link tracing)
   # 4. Calculate and return log likelihood based on count of field levels for

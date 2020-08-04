@@ -15,12 +15,15 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
   # 2. Do bipartite RL between df1 and df2 using BRL.gibbs()
   #    Do not burn anything now! Keep it all, and burn later
   bipartite.samp <- BRL.gibbs.precmp(cmpdata.1to2, nIter, 0, a, b, aBM, bBM, seed)
-  # 3. Set up empty arrays of the appropriate size that will eventually be returned
+  # 3. Create precomputed data structures
+  comparisons.1to3 <- preproc.cmpdata(cmpdata.1to3)
+  comparisons.2to3 <- preproc.cmpdata(cmpdata.2to3)
+  # 4. Set up empty arrays of the appropriate size that will eventually be returned
   m.samples  <- matrix(0, nrow=nrow(bipartite.samp$m), ncol=nIter)
   u.samples  <- matrix(0, nrow=nrow(bipartite.samp$u), ncol=nIter)
   Z.samples  <- matrix(0, nrow=nrow(bipartite.samp$Z), ncol=nIter)
   Z2.samples <- matrix(0, nrow=n3,                     ncol=nIter)
-  # 4. Initialize the first sample (m,u,Z: first sample from bipartite. Z2: unlinked)
+  # 5. Initialize the first sample (m,u,Z: first sample from bipartite. Z2: unlinked)
   m.samples[,1] <- bipartite.samp$m[,1]
   u.samples[,1] <- bipartite.samp$u[,1]
   Z.samples[,1] <- bipartite.samp$Z[,1]
@@ -34,22 +37,22 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
   } else {
     ell <- calc.log.lkl
   }
-  # 5. Perform M-H for each iteration
+  # 6. Perform M-H for each iteration
   for (i in seq(2, nIter)) {
     # What are the current values of the parameters?
     m.curr <- m.samples[,i-1]
     u.curr <- u.samples[,i-1]
     Z.curr <- Z.samples[,i-1]
     Z2.curr <- Z2.samples[,i-1]
-    # 5.1: Propose new m,u,Z collectively. Take sequential samples from bipartite
+    # 6.1: Propose new m,u,Z collectively. Take sequential samples from bipartite
     # TODO Future: resample with replacement from bipartite posterior samples?
     m.prop <- bipartite.samp$m[,i]
     u.prop <- bipartite.samp$u[,i]
     Z.prop <- bipartite.samp$Z[,i]
     # Decide whether to accept new values
     log.alpha1 <- (
-      ell(cmpdata.1to3$comparisons, cmpdata.2to3$comparisons, n1, n2, n3, m.prop, u.prop, Z.prop, Z2.curr)
-      - ell(cmpdata.1to3$comparisons, cmpdata.2to3$comparisons, n1, n2, n3, m.curr, u.curr, Z.curr, Z2.curr)
+      ell(comparisons.1to3, comparisons.2to3, n1, n2, n3, m.prop, u.prop, Z.prop, Z2.curr)
+      - ell(comparisons.1to3, comparisons.2to3, n1, n2, n3, m.curr, u.curr, Z.curr, Z2.curr)
       + calc.log.Z2prior(n1, n2, n3, Z2.curr, Z.prop, aBM, bBM)
       - calc.log.Z2prior(n1, n2, n3, Z2.curr, Z.curr, aBM, bBM)
     )
@@ -69,15 +72,15 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
     m.curr <- m.samples[,i]
     u.curr <- u.samples[,i]
     Z.curr <- Z.samples[,i]
-    # 5.2: Propose new Z2
+    # 6.2: Propose new Z2
     tmp <- draw.Z2.informed(n1, n2, n3, Z.curr, Z2.curr, m.curr, u.curr,
-                            cmpdata.1to3$comparisons, cmpdata.2to3$comparisons,
+                            comparisons.1to3, comparisons.2to3,
                             aBM, bBM, trace=trace)
     Z2.prop <- tmp$Z2
     # Decide whether to accept new values
     log.alpha2 <- (
-      ell(cmpdata.1to3$comparisons, cmpdata.2to3$comparisons, n1, n2, n3, m.curr, u.curr, Z.curr, Z2.prop)
-      - ell(cmpdata.1to3$comparisons, cmpdata.2to3$comparisons, n1, n2, n3, m.curr, u.curr, Z.curr, Z2.curr)
+      ell(comparisons.1to3, comparisons.2to3, n1, n2, n3, m.curr, u.curr, Z.curr, Z2.prop)
+      - ell(comparisons.1to3, comparisons.2to3, n1, n2, n3, m.curr, u.curr, Z.curr, Z2.curr)
       + calc.log.Z2prior(n1, n2, n3, Z2.prop, Z.curr, aBM, bBM)
       - calc.log.Z2prior(n1, n2, n3, Z2.curr, Z.curr, aBM, bBM)
       + log(tmp$mod) # Modifier for proposal probability from the informed proposal
@@ -95,9 +98,9 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
       cat("Iteration ", i, "\n")
     }
   }
-  # 6. Burn the initial samples from both the bipartite and tripartite links, and...
+  # 7. Burn the initial samples from both the bipartite and tripartite links, and...
   keptsamples <- setdiff(1:nIter,seq_len(burn))
-  # 7. Return new list comprised of only accepted samples and new matchings, Z2
+  # 8. Return new list comprised of only accepted samples and new matchings, Z2
   return(list(Z1=Z.samples[,keptsamples,drop=FALSE],
               Z2=Z2.samples[,keptsamples,drop=FALSE],
               m=m.samples[,keptsamples,drop=FALSE],
