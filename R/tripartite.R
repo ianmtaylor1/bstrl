@@ -70,9 +70,9 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
     u.curr <- u.samples[,i]
     Z.curr <- Z.samples[,i]
     # 5.2: Propose new Z2
-    tmp <- draw.Z2.informed(n1, n2, n3, Z, Z2.curr, m, u,
+    tmp <- draw.Z2.informed(n1, n2, n3, Z.curr, Z2.curr, m.curr, u.curr,
                             cmpdata.1to3$comparisons, cmpdata.2to3$comparisons,
-                            trace=trace)
+                            aBM, bBM, trace=trace)
     Z2.prop <- tmp$Z2
     # Decide whether to accept new values
     log.alpha2 <- (
@@ -91,7 +91,7 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
       accepted[2,i] <- 0
     }
     # Print updates
-    if (i  %% (nIter %/% 20) == 0) {
+    if (i  %% max(nIter %/% 20, 1) == 0) {
       cat("Iteration ", i, "\n")
     }
   }
