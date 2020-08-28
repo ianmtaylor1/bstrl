@@ -9,7 +9,7 @@
 tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=FALSE,
                                 nIter.bi=1200, burn.bi=round(nIter.bi*.1),
                                 nIter.tri=nIter.bi-burn.bi, burn.tri=round(nIter.tri*.1),
-                                pprb.method="ordered",
+                                pprb.method="ordered", Z2blocksize=NULL,
                                 a=1, b=1, aBM=1, bBM=1, seed=0) {
   # Parameter checking
   if (! is.element(pprb.method, c("ordered","permuted","resampled"))) {
@@ -104,7 +104,7 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
     # 7.2: Propose new Z2
     tmp <- draw.Z2.informed(n1, n2, n3, Z.curr, Z2.curr, m.curr, u.curr,
                             comparisons.1to3, comparisons.2to3,
-                            aBM, bBM, trace=trace)
+                            aBM, bBM, trace=trace, blocksize=Z2blocksize)
     Z2.prop <- tmp$Z2
     # Decide whether to accept new values
     log.alpha2 <- (
@@ -148,6 +148,7 @@ tripartiteRL <- function(df1, df2, df3,
                          trace=FALSE,
                          nIter.bi=1200, burn.bi=round(nIter.bi*.1),
                          nIter.tri=nIter.bi-burn.bi, burn.tri=round(nIter.tri*.1),
+                         pprb.method="ordered", Z2blocksize=NULL,
                          a=1, b=1, aBM=1, bBM=1, seed=0) {
   # Create comparison data using BRL::compareRecords
   cmpdata.1to2 <- compareRecords(df1, df2, flds, flds1=flds1, flds2=flds2,
@@ -159,6 +160,7 @@ tripartiteRL <- function(df1, df2, df3,
   # Call function with precompared files
   tripartiteRL.precmp(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace,
                       nIter.bi, burn.bi, nIter.tri, burn.tri,
+                      pprb.method, Z2blocksize,
                       a, b, aBM, bBM, seed)
 }
 

@@ -40,21 +40,51 @@ draw.Z2.local <- function(n1, n2, n3, Z, Z2.curr) {
 #   mod = proposal component of M-H acceptance ratio. So that
 #         alpha = pi(Z2new, ...)/pi(Z2curr, ...) * mod
 draw.Z2.informed <- function(n1, n2, n3, Z, Z2.curr,
-                             m, u, cmp.1to3, cmp.2to3, aBM, bBM, trace=FALSE) {
+                             m, u, cmp.1to3, cmp.2to3, aBM, bBM, trace=FALSE,
+                             blocksize=NULL) {
   # Candidates are any unlinked entries in file 1, plus all entries in file 2
   cand <- c(setdiff(seq_len(n1), Z), n1 + seq_len(n2))
+  # Shrink possibilities down to blocksize
+  checkblocks <- FALSE # If true, will need to check blocks for outside links
+  if (is.null(blocksize) || (blocksize >= n3)) {
+    # No reduction necessary in file 3
+    iblock <- seq_len(n3)
+  } else {
+    # Need to select subset of file 3
+    iblock <- sample(n3, size=blocksize, replace=FALSE)
+    checkblocks <- TRUE
+  }
+  if (is.null(blocksize) || (blocksize >= length(cand))) {
+    # No reduction necessary in candidates
+    jblock <- cand
+  } else {
+    # Need to choose subset of candidates
+    jblock <- cand[sample(length(cand), size=blocksize, replace=FALSE)]
+    checkblocks <- TRUE
+  }
+  if (checkblocks) {
+    # Check for links outside the selected blocks
+    # Which records in the iblock are linked, and linked to records NOT IN the jblock?
+    iblock.linked <- iblock[Z2.curr[iblock] <= n1 + n2]
+    iblock.remove <- iblock.linked[!(Z2.curr[iblock.linked] %in% jblock)]
+    iblock <- setdiff(iblock, iblock.remove)
+    # Which records in the jblock are linked, and linked to records NOT IN the iblock?
+    iblock.not <- setdiff(seq_len(n3), iblock)
+    jblock <- setdiff(jblock, Z2.curr[iblock.not])
+  }
   # What is the probability of making any given step?
-  weights <- calc.Z2.stepmatrix(n1, n2, n3, m, u, Z, Z2.curr, cmp.1to3, cmp.2to3, aBM, bBM, cand, trace=trace)
+  weights <- calc.Z2.stepmatrix(iblock, jblock, n1, n2, n3, m, u, Z, Z2.curr, cmp.1to3, cmp.2to3, aBM, bBM, trace=trace)
   # Sample i and j according to these
-  i.draw <- sample(n3, 1, prob=rowSums(weights)) # i marginally
-  j.draw <- cand[sample(length(cand), 1, prob=weights[i.draw,])] # j conditionally
+  i.draw <- iblock[sample(length(iblock), 1, prob=rowSums(weights))] # i marginally
+  j.draw <- jblock[sample(length(jblock), 1, prob=weights[which(iblock == i.draw),])] # j conditionally
   tmp <- perform.Z2.step(n1, n2, Z2.curr, i.draw, j.draw)
   Z2.prop <- tmp$Z2
   reverse.move <- tmp$rev
   # What are the probabilities of backwards steps
-  rev.weights <- calc.Z2.stepmatrix(n1, n2, n3, m, u, Z, Z2.curr, cmp.1to3, cmp.2to3, aBM, bBM, cand, trace=trace)
+  rev.weights <- calc.Z2.stepmatrix(iblock, jblock, n1, n2, n3, m, u, Z, Z2.prop, cmp.1to3, cmp.2to3, aBM, bBM, trace=trace)
   # Return the proposed value and MH acceptance ratio component
-  return(list(Z2=Z2.prop, mod=rev.weights[reverse.move[1],which(cand == reverse.move[2])]/weights[i.draw,which(cand == j.draw)]))
+  mhmod <- rev.weights[which(iblock == reverse.move[1]), which(jblock == reverse.move[2])] / weights[which(iblock == i.draw),which(jblock == j.draw)]
+  return(list(Z2=Z2.prop, mod=mhmod))
 }
 
 
@@ -111,9 +141,15 @@ perform.Z2.step <- function(n1, n2, Z2.curr, i, j) {
 # corresponds to an element of the candidate set, in the order listed in `cand`.
 # The value in M[i,j] is the probability of making the move i,j. Uses the
 # Barker weights g(t) = t/(1+t)
-calc.Z2.stepmatrix <- function(n1, n2, n3, m, u, Z, Z2.curr, cmp.1to3, cmp.2to3, aBM, bBM, cand, trace=FALSE) {
+# Parameters
+# ivec - vector of indices of records in file 3 to consider for steps
+# jvec - vector of indices of records in files 1/2 (candidates) to consider for steps
+# (everything else) - needed to calculate likelihoods for informed step probs
+calc.Z2.stepmatrix <- function(ivec, jvec,
+                               n1, n2, n3, m, u, Z, Z2.curr, cmp.1to3, cmp.2to3,
+                               aBM, bBM, trace=FALSE) {
   # Initialize matrix
-  weights <- matrix(0, nrow=n3, ncol=length(cand))
+  weights <- matrix(0, nrow=length(ivec), ncol=length(jvec))
   # Which likelihood function will we use?
   if (trace) {
     ell <- calc.log.lkl.tracing
@@ -121,13 +157,14 @@ calc.Z2.stepmatrix <- function(n1, n2, n3, m, u, Z, Z2.curr, cmp.1to3, cmp.2to3,
     ell <- calc.log.lkl
   }
   # Fill in the posterior at each resulting position
-  for (i in 1:n3) {
-    for (candidx in 1:length(cand)) {
-      j <- cand[candidx]
+  for (fromidx in 1:length(ivec)) {
+    for (candidx in 1:length(jvec)) {
+      i <- ivec[fromidx]
+      j <- jvec[candidx]
       # What Z2 would be proposed from modifying the pair (i,j)?
       Z2.prop <- perform.Z2.step(n1, n2, Z2.curr, i, j)$Z2
       # Calculate posterior for new Z2
-      weights[i, candidx] <- (ell(cmp.1to3, cmp.2to3, n1, n2, n3, m, u, Z, Z2.prop) + calc.log.Z2prior(n1, n2, n3, Z2.prop, Z, aBM, bBM))
+      weights[fromidx, candidx] <- (ell(cmp.1to3, cmp.2to3, n1, n2, n3, m, u, Z, Z2.prop) + calc.log.Z2prior(n1, n2, n3, Z2.prop, Z, aBM, bBM))
     }
   }
   # Subtract the log posterior at the current state
