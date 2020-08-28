@@ -16,7 +16,7 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
     stop("pprb.method must be one of 'ordered', 'permuted', or 'resampled'")
   }
   if (is.element(pprb.method, c("ordered","permuted")) && (nIter.tri != nIter.bi - burn.bi)) {
-    warntext <- paste0("If pprb.method is 'ordered' or 'permuted', ",
+    warntext <- paste0("If pprb.method is '", pprb.method, "', ",
                        "require nIter.tri == nIter.bi - burn.bi\n",
                        "Setting parameter values:\n",
                        "nIter.tri <- ", nIter.bi - burn.bi, "\n",
