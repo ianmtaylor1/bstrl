@@ -45,33 +45,12 @@ draw.Z2.informed <- function(n1, n2, n3, Z, Z2.curr,
   # Candidates are any unlinked entries in file 1, plus all entries in file 2
   cand <- c(setdiff(seq_len(n1), Z), n1 + seq_len(n2))
   # Shrink possibilities down to blocksize
-  checkblocks <- FALSE # If true, will need to check blocks for outside links
-  if (is.null(blocksize) || (blocksize >= n3)) {
-    # No reduction necessary in file 3
-    iblock <- seq_len(n3)
-  } else {
-    # Need to select subset of file 3
-    iblock <- sample(n3, size=blocksize, replace=FALSE)
-    checkblocks <- TRUE
+  blocks <- create.blocks(blocksize, n1, n2, n3, cand, Z2.curr)
+  while ((length(blocks$iblock) == 0) || (length(blocks$jblock) == 0)) {
+    blocks <- create.blocks(blocksize, n1, n2, n3, cand, Z2.curr)
   }
-  if (is.null(blocksize) || (blocksize >= length(cand))) {
-    # No reduction necessary in candidates
-    jblock <- cand
-  } else {
-    # Need to choose subset of candidates
-    jblock <- cand[sample(length(cand), size=blocksize, replace=FALSE)]
-    checkblocks <- TRUE
-  }
-  if (checkblocks) {
-    # Check for links outside the selected blocks
-    # Which records in the iblock are linked, and linked to records NOT IN the jblock?
-    iblock.linked <- iblock[Z2.curr[iblock] <= n1 + n2]
-    iblock.remove <- iblock.linked[!(Z2.curr[iblock.linked] %in% jblock)]
-    iblock <- setdiff(iblock, iblock.remove)
-    # Which records in the jblock are linked, and linked to records NOT IN the iblock?
-    iblock.not <- setdiff(seq_len(n3), iblock)
-    jblock <- setdiff(jblock, Z2.curr[iblock.not])
-  }
+  iblock <- blocks$iblock
+  jblock <- blocks$jblock
   # What is the probability of making any given step?
   weights <- calc.Z2.stepmatrix(iblock, jblock, n1, n2, n3, m, u, Z, Z2.curr, cmp.1to3, cmp.2to3, aBM, bBM, trace=trace)
   # Sample i and j according to these
@@ -175,4 +154,42 @@ calc.Z2.stepmatrix <- function(ivec, jvec,
   weights <- weights / (1 + weights)
   # Divide by the normalizing constant
   return(weights / sum(weights))
+}
+
+# Function to create blocks of a specified size for blockwise informed proposals
+# Given a blocksize, randomly select at most 'blocksize' elements of file 3 and
+# at most 'blocksize' elements of the candidate set, where no selected elements
+# are linked to any non-selected elements.
+# If 'blocksize' is null, do not shrink blocks at all.
+create.blocks <- function(blocksize, n1, n2, n3, cand, Z2) {
+  # If true, will need to check blocks for outside links
+  checkblocks <- FALSE
+  if (is.null(blocksize) || (blocksize >= n3)) {
+    # No reduction necessary in file 3
+    iblock <- seq_len(n3)
+  } else {
+    # Need to select subset of file 3
+    iblock <- sample(n3, size=blocksize, replace=FALSE)
+    checkblocks <- TRUE
+  }
+  if (is.null(blocksize) || (blocksize >= length(cand))) {
+    # No reduction necessary in candidates
+    jblock <- cand
+  } else {
+    # Need to choose subset of candidates
+    jblock <- cand[sample(length(cand), size=blocksize, replace=FALSE)]
+    checkblocks <- TRUE
+  }
+  if (checkblocks) {
+    # Check for links outside the selected blocks
+    # Which records in the iblock are linked, and linked to records NOT IN the jblock?
+    iblock.linked <- iblock[Z2[iblock] <= n1 + n2]
+    iblock.remove <- iblock.linked[!(Z2[iblock.linked] %in% jblock)]
+    iblock <- setdiff(iblock, iblock.remove)
+    # Which records in the jblock are linked, and linked to records NOT IN the iblock?
+    iblock.not <- setdiff(seq_len(n3), iblock)
+    jblock <- setdiff(jblock, Z2[iblock.not])
+  }
+  # Return both blocks
+  return(list(iblock=iblock, jblock=jblock))
 }
