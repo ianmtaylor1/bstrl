@@ -9,7 +9,7 @@
 tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=FALSE,
                                 nIter.bi=1200, burn.bi=round(nIter.bi*.1),
                                 nIter.tri=nIter.bi-burn.bi, burn.tri=round(nIter.tri*.1),
-                                pprb.method="ordered", Z2blocksize=NULL,
+                                pprb.method="ordered", pprb.repeat=1, Z2blocksize=NULL,
                                 a=1, b=1, aBM=1, bBM=1, seed=0) {
   # Parameter checking
   if (! is.element(pprb.method, c("ordered","permuted","resampled"))) {
@@ -17,12 +17,20 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
   }
   if (is.element(pprb.method, c("ordered","permuted")) && (nIter.tri != nIter.bi - burn.bi)) {
     warntext <- paste0("If pprb.method is '", pprb.method, "', ",
-                       "require nIter.tri == nIter.bi - burn.bi\n",
+                       "we require nIter.tri == nIter.bi - burn.bi\n",
                        "Setting parameter values:\n",
                        "nIter.tri <- ", nIter.bi - burn.bi, "\n",
                        "burn.tri  <- ", burn.tri)
     warning(warntext)
     nIter.tri <- nIter.bi - burn.bi
+  }
+  if ((pprb.method != "resample") && (pprb.repeat != 1)) {
+    warntext <- paste0("If pprb.method is '", pprb.method, "', ",
+                       "we require pprb.repeat == 1\n",
+                       "Setting parameter values:\n",
+                       "pprb.repeat <- 1")
+    warning(warntext)
+    pprb.repeat <- 1
   }
 
   # 1. Size of files
@@ -96,6 +104,9 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
       u.samples[,i] <- u.curr
       Z.samples[,i] <- Z.curr
       accepted[1,i] <- 0
+      if (log.alpha1 == -Inf) {
+        pprb.impossible[i] <- 1
+      }
     }
     # Reset "current" values of parameters
     m.curr <- m.samples[,i]
@@ -121,9 +132,6 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
       # reject
       Z2.samples[,i] <- Z2.curr
       accepted[2,i] <- 0
-      if (log.alpha2 == -Inf) {
-        pprb.impossible[i] <- 1
-      }
     }
     # Print updates
     if (i  %% max(nIter.tri %/% 20, 1) == 0) {
