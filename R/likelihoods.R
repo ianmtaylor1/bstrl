@@ -70,16 +70,12 @@ calc.log.lkl.tracing <- function(cmp.1to3, cmp.2to3, n1, n2, n3, m, u, Z, Z2) {
 # finite values compare greater than negative infinity. So this value can be used
 # in acceptance ratio computations without worrying.
 calc.log.Z2prior <- function(n1, n2, n3, Z2, Z, aBM, bBM) {
-  # Candidates are any unlinked entries in file 1, plus all entries in file 2
-  cand <- c(setdiff(seq_len(n1), Z), n1 + seq_len(n2))
-  noncand <- Z[Z <= n1]
-  # How many links are there currently between file 3 and the candidate set?
-  nlinked <- sum(Z2 <= n1 + n2)
   # Calculate the log of the prior and return
-  if (any(Z2 %in% noncand)) {
-    # Impossible -> probability zero -> log probability -Inf.
-    return(-Inf)
-  } else {
+  if (valid.link.state(n1, Z, Z2)) {
+    # Candidates are any unlinked entries in file 1, plus all entries in file 2
+    cand <- c(setdiff(seq_len(n1), Z), n1 + seq_len(n2))
+    # How many links are there currently between file 3 and the candidate set?
+    nlinked <- sum(Z2 <= n1 + n2)
     # Work in log scale: replacing log(x!) with lgamma(x+1) and log(beta(a,b))
     # with lbeta(a,b)
     logprior <- (
@@ -87,5 +83,17 @@ calc.log.Z2prior <- function(n1, n2, n3, Z2, Z, aBM, bBM) {
       + (lbeta(aBM + nlinked, bBM + n3 - nlinked) - lbeta(aBM, bBM))
     )
     return(logprior)
+  } else {
+    # Impossible -> probability zero -> log probability -Inf.
+    return(-Inf)
   }
+}
+
+
+# Determines whether the given values of Z, Z2 are viable according to the
+# candidate set rules. I.e. returns true if no records are linked to the same
+# record in file 1. Else returns false.
+valid.link.state <- function(n1, Z, Z2) {
+  noncand <- Z[Z <= n1] # Non-candidates: records in file 1 with links
+  return(!any(Z2 %in% noncand))
 }
