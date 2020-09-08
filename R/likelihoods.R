@@ -89,6 +89,9 @@ calc.log.Z2prior <- function(n1, n2, n3, Z2, Z, aBM, bBM) {
   }
 }
 
+################################################################################
+# Helper Functions for Likelihood/Prior functions ##############################
+################################################################################
 
 # Determines whether the given values of Z, Z2 are viable according to the
 # candidate set rules. I.e. returns true if no records are linked to the same

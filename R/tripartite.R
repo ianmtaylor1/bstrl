@@ -48,19 +48,21 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
   u.samples  <- matrix(0, nrow=nrow(bipartite.samp$u), ncol=nIter.tri)
   Z.samples  <- matrix(0, nrow=nrow(bipartite.samp$Z), ncol=nIter.tri)
   Z2.samples <- matrix(0, nrow=n3,                     ncol=nIter.tri)
-  # 5. Based on whether the PPRB is ordered, permuted, or resampled, produce a
-  #    list of the proposal indexes
-  if (pprb.method == "ordered") {
-    pprb.index <- seq_len(nIter.tri)
-  } else if (pprb.method == "permuted") {
-    pprb.index <- sample(nIter.tri)
-  } else if (pprb.method == "resampled") {
-    pprb.index <- sample(nIter.bi-burn.bi, size=nIter.tri, replace=TRUE)
+  # 5. If PPRB is permuted, produce a list of the proposal indexes by permuting
+  if (pprb.method == "permuted") {
+    pprb.index <- sample(nIter.tri) # Note: nIter.tri == nIter.bi - burn.bi necessarily
   }
   # 6. Initialize the first sample (m,u,Z: first sample from bipartite. Z2: unlinked)
-  m.samples[,1] <- bipartite.samp$m[,pprb.index[1]]
-  u.samples[,1] <- bipartite.samp$u[,pprb.index[1]]
-  Z.samples[,1] <- bipartite.samp$Z[,pprb.index[1]]
+  if (pprb.method == "resampled") {
+    startidx <- sample(nIter.bi - burn.bi, size=1)
+  } else if (pprb.method == "permuted") {
+    startidx <- pprb.index[1]
+  } else { # Ordered
+    startidx <- 1
+  }
+  m.samples[,1] <- bipartite.samp$m[,startidx]
+  u.samples[,1] <- bipartite.samp$u[,startidx]
+  Z.samples[,1] <- bipartite.samp$Z[,startidx]
   Z2.samples[,1] <- n1 + n2 + seq_len(n3)
   # Create array to hold record of acceptances: first row = m,u,Z. second row = Z2
   # Contains all 1's by default, zeros written on rejection
@@ -81,18 +83,41 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
     u.curr <- u.samples[,i-1]
     Z.curr <- Z.samples[,i-1]
     Z2.curr <- Z2.samples[,i-1]
-    # 7.1: Propose new m,u,Z collectively. Take sequential samples from bipartite
-    # TODO Future: resample with replacement from bipartite posterior samples?
-    m.prop <- bipartite.samp$m[,pprb.index[i]]
-    u.prop <- bipartite.samp$u[,pprb.index[i]]
-    Z.prop <- bipartite.samp$Z[,pprb.index[i]]
-    # Decide whether to accept new values
+    # 7.1: Propose new m,u,Z collectively from PPRB
+    if (pprb.method == "resampled") {
+      # Go through all bipartite samples until you find one that is a valid
+      # link state, then propose that one. There is guaranteed to always be at
+      # least one because the current state is valid. All invalid link states
+      # have probability zero in the target so we can avoid proposing them.
+      for (j in sample(ncol(bipartite.samp$Z))) {
+        if (valid.link.state(n1, bipartite.samp$Z[,j], Z2.curr)) {
+          break # Leaves j at its current value outside the loop
+        }
+      }
+      m.prop <- bipartite.samp$m[,j]
+      u.prop <- bipartite.samp$u[,j]
+      Z.prop <- bipartite.samp$Z[,j]
+    } else {
+      # What value should be proposed?
+      if (pprb.method == "permuted") {
+        m.prop <- bipartite.samp$m[,pprb.index[i]]
+        u.prop <- bipartite.samp$u[,pprb.index[i]]
+        Z.prop <- bipartite.samp$Z[,pprb.index[i]]
+      } else {
+        # Ordered
+        m.prop <- bipartite.samp$m[,i]
+        u.prop <- bipartite.samp$u[,i]
+        Z.prop <- bipartite.samp$Z[,i]
+      }
+    }
+    # What is the log of the MH acceptance ratio?
     log.alpha1 <- (
       ell(comparisons.1to3, comparisons.2to3, n1, n2, n3, m.prop, u.prop, Z.prop, Z2.curr)
       - ell(comparisons.1to3, comparisons.2to3, n1, n2, n3, m.curr, u.curr, Z.curr, Z2.curr)
       + calc.log.Z2prior(n1, n2, n3, Z2.curr, Z.prop, aBM, bBM)
       - calc.log.Z2prior(n1, n2, n3, Z2.curr, Z.curr, aBM, bBM)
     )
+    # Decide whether to accept new values
     if (-rexp(1) < log.alpha1) {
       # accept
       m.samples[,i] <- m.prop
@@ -172,4 +197,8 @@ tripartiteRL <- function(df1, df2, df3,
                       a, b, aBM, bBM, seed)
 }
 
+
+################################################################################
+# Helper Functions for Tripartite Linkage Functions ############################
+################################################################################
 
