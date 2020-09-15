@@ -154,14 +154,14 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
         m.samples[,i] <- m.prop
         u.samples[,i] <- u.prop
         Z.samples[,i] <- Z.prop
-        accepted[1,i] <- 1
+        accepted[1,i] <- accepted[1,i] + 1
       } else {
         # reject
         m.samples[,i] <- m.curr
         u.samples[,i] <- u.curr
         Z.samples[,i] <- Z.curr
         if (log.alpha1 == -Inf) {
-          pprb.impossible[i] <- 1
+          pprb.impossible[i] <- pprb.impossible[i] + 1
         }
       }
       # Reset "current" values of parameters
@@ -229,7 +229,8 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
               m=m.samples[,keptsamples,drop=FALSE],
               u=u.samples[,keptsamples,drop=FALSE],
               accepted=accepted[,keptsamples,drop=FALSE],
-              pprb.impossible=pprb.impossible[keptsamples]))
+              pprb.impossible=pprb.impossible[keptsamples],
+              pprb.repeat=pprb.repeat))
 }
 
 #' @export

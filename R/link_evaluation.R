@@ -2,6 +2,7 @@
 
 # Given an estimated Z,Z2, and a true Z,Z2: determine the precision of the
 # estimates.
+#' @export
 precision <- function(n1, Z, Z2, true.Z, true.Z2) {
   n2 <- length(Z)
   n3 <- length(Z2)
@@ -29,7 +30,8 @@ precision <- function(n1, Z, Z2, true.Z, true.Z2) {
 
 # Given an estimated Z,Z2, and a true Z,Z2: determine the recall of the
 # estimates.
-recall <- function(Z, Z2, true.Z, true.Z2) {
+#' @export
+recall <- function(n1, Z, Z2, true.Z, true.Z2) {
   n2 <- length(Z)
   n3 <- length(Z2)
   # First, create a copy of Z2 (and true.Z2) except following traced links where applicable.
