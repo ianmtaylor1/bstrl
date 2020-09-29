@@ -1,4 +1,5 @@
-# Functions in this file are wrappers of BRL functions without adding much.
+# Functions in this perform bipartite linkage, either by wrapping the BRL package
+# or by doing its own sampling
 
 
 # Function to do bipartite bayesian RL - all but the point estimate part.
