@@ -13,7 +13,7 @@
 #   m - a matrix with \sum_{f=1}^F L_f rows and nIter-burn columns
 #   u - a matrix with \sum_{f=1}^F L_f rows and nIter-burn columns
 #' @export
-BRL.gibbs.precmp <- function(cmpdata, nIter=1000, burn=round(nIter*.1), a=1, b=1, aBM=1, bBM=1, seed=0) {
+bipartiteRL.precmp <- function(cmpdata, nIter=1000, burn=round(nIter*.1), a=1, b=1, aBM=1, bBM=1, seed=0) {
 
   # 'burn' is not a parameter of the other functions, so we control it here
   if( !is.numeric(burn) | (burn<0) | (burn>=nIter) )
@@ -30,7 +30,7 @@ BRL.gibbs.precmp <- function(cmpdata, nIter=1000, burn=round(nIter*.1), a=1, b=1
 }
 
 #' @export
-BRL.gibbs <- function(df1, df2, flds=NULL, flds1=NULL, flds2=NULL, types=NULL, breaks=c(0,.25,.5),
+bipartiteRL <- function(df1, df2, flds=NULL, flds1=NULL, flds2=NULL, types=NULL, breaks=c(0,.25,.5),
                       nIter=1000, burn=round(nIter*.1), a=1, b=1, aBM=1, bBM=1, seed=0){
 
   # create comparison data

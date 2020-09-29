@@ -37,9 +37,9 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
   n1 <- cmpdata.1to3$n1
   n2 <- cmpdata.2to3$n1
   n3 <- cmpdata.1to3$n2
-  # 2. Do bipartite RL between df1 and df2 using BRL.gibbs()
+  # 2. Do bipartite RL between df1 and df2 using bipartiteRL.gibbs()
   #    Do not burn anything now! Keep it all, and burn later
-  bipartite.samp <- BRL.gibbs.precmp(cmpdata.1to2, nIter.bi, burn.bi, a, b, aBM, bBM, seed)
+  bipartite.samp <- bipartiteRL.precmp(cmpdata.1to2, nIter.bi, burn.bi, a, b, aBM, bBM, seed)
   # 3. Create precomputed data structures
   comparisons.1to3 <- preproc.cmpdata(cmpdata.1to3)
   comparisons.2to3 <- preproc.cmpdata(cmpdata.2to3)
