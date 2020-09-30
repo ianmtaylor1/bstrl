@@ -135,4 +135,60 @@ matchrows <- function(cmpdata, Z2, offset=0) {
   return((which(linked) - 1) * n1 + (Z2[linked] - offset))
 }
 
+# Determines which rows in comparison data correspond to noncandidates, according to
+# the match vector supplied
+# Parameters:
+#   cmpdata = comparison data in the format returned by BRL::compareRecords. The
+#             "file 1" in this structure corresponds to a file number m, and
+#             "file 2" corresponds to a file number k > m
+#   Z = a vector of matches. Its length is unimportant, but it must obey this
+#       constraint: An index i appears in Z, corresponding to a record in
+#       cmpdata's "file 1", IF AND ONLY IF it is linked to by a record in some
+#       file numbered l, m < l < k. I.e. if an index i appears in Z then that
+#       record is not a candidate.
+#   offset = an integer equal to the total number of records in files "earlier"
+#            than "file 1" in the comparison data.
+# Example usage:
+#   In a streaming setting, cmpdata compares file 3 to file 5. The file sizes are
+#   n1, n2, n3, n4, and n5 respectively. Z is a vector of length n4 with values
+#   from 1 to n1+n2+n3+n4. Values between n1+n2+1 and n1+n2+n3 represent the
+#   links with file 3.
+#   You would call
+#     noncandrows(cmpdata, Z, offset=n1+n2)
+#   to return the rows in cmpdata that correspond to matches involving a record
+#   in file 3 which are not candidates.
+noncandrows <- function(cmpdata, Z=c(), offset=0) {
+  n1 <- cmpdata$n1
+  n2 <- cmpdata$n2
+  # Indices of records in "file 1" which are linked to by the vector Z
+  noncand.records <- Z[(Z > offset) & (Z <= offset+n1)]
+  # Non-candidate pairs are any pair involving any of these records
+  return(c(outer((seq_len(n2) - 1) * n1, noncand.records, "+")))
+}
 
+# Function to return a link-traced version of the link vector Z2, following down
+# the vector Z for the given number of steps
+# Parameters:
+#   Z2 = The vector to be traced
+#   Z = The vector containing the next steps to be followed
+#   steps = The number of additional steps to take
+#   offset = An offset of the starting position of the indices of Z. Any records
+#            with indices less than or equal to offset are assumed to be the end
+#            of their chain. This can be used to exclude file 1, for example, if
+#            its links are excluded from Z to save space
+# Returns:
+#   Z2, but with links traces 'steps' further steps according to the links
+#   defined in Z.
+trace <- function(Z2, Z=Z2, steps=0, offset=0) {
+  # Vector which will be updated with traces
+  Z2.traced <- Z2
+  n.prev.records <- length(Z) + offset
+  for (step in 1:steps) {
+    # At this step, which records are linked to previous records which can be
+    # further traced?
+    traceable <- (Z2.traced > offset) & (Z2.traced <= n.prev.records)
+    # Follow one more step with Z
+    Z2.traced[traceable] <- Z[Z2.traced[traceable] - offset]
+  }
+  Z2.traced
+}
