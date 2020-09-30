@@ -100,3 +100,39 @@ valid.link.state <- function(n1, Z, Z2) {
   noncand <- Z[Z <= n1] # Non-candidates: records in file 1 with links
   return(!any(Z2 %in% noncand))
 }
+
+# Determines which rows in comparison data correspond to matches, according to
+# the match vector supplied
+# Parameters:
+#   cmpdata = comparison data in the format returned by BRL::compareRecords
+#   Z2 = a vector of matches the length of "file 2" in the comparison data. Each
+#        entry is for an element of "file 2"
+#   offset = an integer equal to the total number of records in files "earlier"
+#            than "file 1" in the comparison data. This offset is essentially
+#            subtracted from the values of Z2 to rule out matches with any of
+#            these earlier files.
+# Example usage:
+#   In a streaming setting, cmpdata compares file 3 to file 5. The file sizes are
+#   n1, n2, n3, n4, and n5 respectively. Z2 is a vector of length n5 with values
+#   from 1 to n1+n2+n3+n4+n5. Values between n1+n2+1 and n1+n2+n3 represent the
+#   links with file 3. Values larger than n1+n2+n3+n4 represent unlinked records
+#   You would call
+#     matchrows(cmpdata, Z2, offset=n1+n2)
+#   to return the rows in cmpdata the correspond to matches between file 3 and
+#   file 5.
+# Notes:
+#   Link tracing is not done. Link tracing must be pre-incorporated into Z2.
+matchrows <- function(cmpdata, Z2, offset=0) {
+  n1 <- cmpdata$n1
+  n2 <- cmpdata$n2
+  # Check that we have a correct Z2
+  if (length(Z2) != n2) {
+    stop("matchrows() - length of Z2 does not match cmpdata's file 2")
+  }
+  # Boolean index of records in "file 2" which are linked to "file 1"
+  linked <- (Z2 > offset) & (Z2 <= offset+n1)
+  # For links, return j*n1 + i (subtracting offset from i)
+  return((which(linked) - 1) * n1 + (Z2[linked] - offset))
+}
+
+

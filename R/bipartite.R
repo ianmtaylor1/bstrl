@@ -8,10 +8,14 @@
 # Copy/paste from the BRL source code, just removing the call to linkRecords()
 # Therefore, arguments are the same (minus the loss weight arguments for the
 # point estimates)
-# Returns a list with three items:
+# Returns a list with five items:
 #   Z - a matrix with n2 rows and nIter-burn columns
 #   m - a matrix with \sum_{f=1}^F L_f rows and nIter-burn columns
 #   u - a matrix with \sum_{f=1}^F L_f rows and nIter-burn columns
+#   m.fc.pars - Used for further sampling. Contains the values that, when added
+#     to the prior parameters for m, allow you to sample from the conjugate full
+#     conditional of m given Z and the comparisons.
+#   u.fc.pars - Same as ^ but for u.
 #' @export
 bipartiteRL.precmp <- function(cmpdata, nIter=1000, burn=round(nIter*.1), a=1, b=1, aBM=1, bBM=1, seed=0) {
 
@@ -26,7 +30,9 @@ bipartiteRL.precmp <- function(cmpdata, nIter=1000, burn=round(nIter*.1), a=1, b
   iterfilter <- setdiff(1:nIter,seq_len(burn))
   list(Z=chain$Z[,iterfilter,drop=FALSE],
        m=chain$m[,iterfilter,drop=FALSE],
-       u=chain$u[,iterfilter,drop=FALSE])
+       u=chain$u[,iterfilter,drop=FALSE],
+       m.fc.pars=matrix(0, nrow=nrow(chain$m), ncol=nIter-burn),
+       u.fc.pars=matrix(0, nrow=nrow(chain$u), ncol=nIter-burn))
 }
 
 #' @export
