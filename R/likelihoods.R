@@ -149,14 +149,14 @@ matchrows <- function(cmpdata, Z2, offset=0) {
 #   offset = an integer equal to the total number of records in files "earlier"
 #            than "file 1" in the comparison data.
 # Example usage:
-#   In a streaming setting, cmpdata compares file 3 to file 5. The file sizes are
-#   n1, n2, n3, n4, and n5 respectively. Z is a vector of length n4 with values
-#   from 1 to n1+n2+n3+n4. Values between n1+n2+1 and n1+n2+n3 represent the
-#   links with file 3.
+#   In a streaming setting, cmpdata compares file 2 to file 5. The file sizes are
+#   n1, n2, n3, n4, and n5 respectively. Z is a vector of length n3+n4 with values
+#   from 1 to n1+n2+n3+n4. Values between n1+1 and n1+n2 represent the
+#   links with file 2.
 #   You would call
-#     noncandrows(cmpdata, Z, offset=n1+n2)
+#     noncandrows(cmpdata, Z, offset=n1)
 #   to return the rows in cmpdata that correspond to matches involving a record
-#   in file 3 which are not candidates.
+#   in file 2 which are not candidates.
 noncandrows <- function(cmpdata, Z=c(), offset=0) {
   n1 <- cmpdata$n1
   n2 <- cmpdata$n2
