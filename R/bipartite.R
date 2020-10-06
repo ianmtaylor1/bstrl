@@ -31,7 +31,7 @@ bipartiteRL.precmp <- function(cmpdata, nIter=1000, burn=round(nIter*.1), a=1, b
   m.fc.pars <- matrix(0, nrow=nrow(chain$m), ncol=nIter)
   u.fc.pars <- matrix(0, nrow=nrow(chain$m), ncol=nIter)
   for (i in 1:nIter) {
-    match.idx <- matchrows(cmpdata, Z)
+    match.idx <- matchrows(cmpdata, chain$Z[,i])
     match.counts <- colSums(cmpdata$comparisons[match.idx,,drop=FALSE])
     m.fc.pars[,i] <- match.counts
     u.fc.pars[,i] <- total.counts - match.counts
