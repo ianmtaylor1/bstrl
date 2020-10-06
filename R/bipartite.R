@@ -26,13 +26,24 @@ bipartiteRL.precmp <- function(cmpdata, nIter=1000, burn=round(nIter*.1), a=1, b
   # Gibbs sampling from posterior of bipartite matchings
   chain <- BRL::bipartiteGibbs(cmpdata, nIter, a, b, aBM, bBM, seed)
 
+  # Calculate comparison summaries for each value of Z
+  total.counts <- colSums(cmpdata$comparisons)
+  m.fc.pars <- matrix(0, nrow=nrow(chain$m), ncol=nIter)
+  u.fc.pars <- matrix(0, nrow=nrow(chain$m), ncol=nIter)
+  for (i in 1:nIter) {
+    match.idx <- matchrows(cmpdata, Z)
+    match.counts <- colSums(cmpdata$comparisons[match.idx,,drop=FALSE])
+    m.fc.pars[,i] <- match.counts
+    u.fc.pars[,i] <- total.counts - match.counts
+  }
+
   # Filter the burn-in iterations
   iterfilter <- setdiff(1:nIter,seq_len(burn))
   list(Z=chain$Z[,iterfilter,drop=FALSE],
        m=chain$m[,iterfilter,drop=FALSE],
        u=chain$u[,iterfilter,drop=FALSE],
-       m.fc.pars=matrix(0, nrow=nrow(chain$m), ncol=nIter-burn),
-       u.fc.pars=matrix(0, nrow=nrow(chain$u), ncol=nIter-burn))
+       m.fc.pars=m.fc.pars[,iterfilter,drop=FALSE],
+       u.fc.pars=u.fc.pars[,iterfilter,drop=FALSE])
 }
 
 #' @export
