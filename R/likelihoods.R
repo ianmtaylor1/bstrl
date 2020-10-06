@@ -31,7 +31,7 @@ calc.log.lkl.tracing <- function(cmp.1to3, cmp.2to3, m, u, Z, Z2) {
   # 1. Which rows of cmp.2to3 correspond to matches?
   matchrows.2to3 <- matchrows(cmp.2to3, Z2, offset=cmp.1to3$n1)
   # 2. Which rows of cmp.1to3 correspond to matches (traced or direct?) matches?
-  matchrows.1to3 <- matchrows(cmp.1to3, traced(Z2, Z, steps=1, offset=cmp.1to3$n1), offset=0)
+  matchrows.1to3 <- matchrows(cmp.1to3, trace(Z2, Z, steps=1, offset=cmp.1to3$n1), offset=0)
   # 3. Compute filtered column sums: for match and nonmatch pairs, how many times
   #    does a given level of a given field appear?
   total.count <- attr(cmp.1to3$comparisons, "totals") + attr(cmp.2to3$comparisons, "totals")
