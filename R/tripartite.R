@@ -9,7 +9,7 @@
 tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=FALSE,
                                 nIter.bi=1200, burn.bi=round(nIter.bi*.1),
                                 nIter.tri=nIter.bi-burn.bi, burn.tri=round(nIter.tri*.1),
-                                pprb.method="ordered", pprb.repeat=1, Z2blocksize=NULL,
+                                pprb.method="ordered", Z2blocksize=NULL,
                                 a=1, b=1, aBM=1, bBM=1, seed=0) {
   # Parameter checking
   if (! is.element(pprb.method, c("ordered","permuted","resampled"))) {
@@ -23,14 +23,6 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
                        "burn.tri  <- ", burn.tri)
     warning(warntext)
     nIter.tri <- nIter.bi - burn.bi
-  }
-  if ((pprb.method != "resample") && (pprb.repeat != 1)) {
-    warntext <- paste0("If pprb.method is '", pprb.method, "', ",
-                       "we require pprb.repeat == 1\n",
-                       "Setting parameter values:\n",
-                       "pprb.repeat <- 1")
-    warning(warntext)
-    pprb.repeat <- 1
   }
 
   # 1. Size of files
