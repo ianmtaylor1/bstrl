@@ -6,12 +6,10 @@
 # BRL::compareRecords, and preprocesses it into a form that is most useful to
 # the bstrl sampler.
 preproc.cmpdata <- function(compared) {
-  # Extract the binary comparison matrix
-  m <- compared$comparisons
   # Attach the column sums as an attribute. Column sums are needed in likelihood
   # functions, and computing them over and over again adds up in terms of comp
   # time.
-  attr(m, "totals") <- colSums(m)
+  attr(compared$comparisons, "totals") <- colSums(compared$comparisons)
   # Return the matrix with attached column sums
-  return(m)
+  return(compared)
 }

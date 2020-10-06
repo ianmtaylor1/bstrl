@@ -112,8 +112,8 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
     }
     # What is the log of the MH acceptance ratio?
     log.alpha1 <- (
-      ell(comparisons.1to3, comparisons.2to3, n1, n2, n3, m.prop, u.prop, Z.prop, Z2.curr)
-      - ell(comparisons.1to3, comparisons.2to3, n1, n2, n3, m.curr, u.curr, Z.curr, Z2.curr)
+      ell(comparisons.1to3, comparisons.2to3, m.prop, u.prop, Z.prop, Z2.curr)
+      - ell(comparisons.1to3, comparisons.2to3, m.curr, u.curr, Z.curr, Z2.curr)
       + calc.log.Z2prior(n1, n2, n3, Z2.curr, Z.prop, aBM, bBM)
       - calc.log.Z2prior(n1, n2, n3, Z2.curr, Z.curr, aBM, bBM)
     )
@@ -144,8 +144,8 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
     Z2.prop <- tmp$Z2
     # Decide whether to accept new values
     log.alpha2 <- (
-      ell(comparisons.1to3, comparisons.2to3, n1, n2, n3, m.curr, u.curr, Z.curr, Z2.prop)
-      - ell(comparisons.1to3, comparisons.2to3, n1, n2, n3, m.curr, u.curr, Z.curr, Z2.curr)
+      ell(comparisons.1to3, comparisons.2to3, m.curr, u.curr, Z.curr, Z2.prop)
+      - ell(comparisons.1to3, comparisons.2to3, m.curr, u.curr, Z.curr, Z2.curr)
       + calc.log.Z2prior(n1, n2, n3, Z2.prop, Z.curr, aBM, bBM)
       - calc.log.Z2prior(n1, n2, n3, Z2.curr, Z.curr, aBM, bBM)
       + log(tmp$mod) # Modifier for proposal probability from the informed proposal

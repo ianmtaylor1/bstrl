@@ -143,11 +143,11 @@ calc.Z2.stepmatrix <- function(ivec, jvec,
       # What Z2 would be proposed from modifying the pair (i,j)?
       Z2.prop <- perform.Z2.step(n1, n2, Z2.curr, i, j)$Z2
       # Calculate posterior for new Z2
-      weights[fromidx, candidx] <- (ell(cmp.1to3, cmp.2to3, n1, n2, n3, m, u, Z, Z2.prop) + calc.log.Z2prior(n1, n2, n3, Z2.prop, Z, aBM, bBM))
+      weights[fromidx, candidx] <- (ell(cmp.1to3, cmp.2to3, m, u, Z, Z2.prop) + calc.log.Z2prior(n1, n2, n3, Z2.prop, Z, aBM, bBM))
     }
   }
   # Subtract the log posterior at the current state
-  weights <- weights - (ell(cmp.1to3, cmp.2to3, n1, n2, n3, m, u, Z, Z2.curr) + calc.log.Z2prior(n1, n2, n3, Z2.curr, Z, aBM, bBM))
+  weights <- weights - (ell(cmp.1to3, cmp.2to3, m, u, Z, Z2.curr) + calc.log.Z2prior(n1, n2, n3, Z2.curr, Z, aBM, bBM))
   # Bring out of log scale
   weights <- exp(weights)
   # Calculate g(t) for all elements of the matrix

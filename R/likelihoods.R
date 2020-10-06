@@ -2,25 +2,19 @@
 # tripartite record linkage.
 
 # Function to calculate the likelihood of new data from given parameter values
-# cmp.1to3 and cmp.2to3 are the comparison matrices from the output of
+# cmp.1to3 and cmp.2to3 are the comparison objects from the output of
 # BRL::compareRecords
-calc.log.lkl <- function(cmp.1to3, cmp.2to3, n1, n2, n3, m, u, Z, Z2) {
+calc.log.lkl <- function(cmp.1to3, cmp.2to3, m, u, Z, Z2) {
   # 1. Which rows of cmp.1to3 and cmp.2to3 correspond to matches?
-  matchrows.1to3 <- (which(Z2 <= n1) - 1) * n1 + Z2[Z2 <= n1]
-  #                 ((what records in file 3 have links in file 1?) - 1) * n1
-  #                 + (what records in file 1 are they linked to?)
-  matchrows.2to3 <- (which((Z2 > n1) & (Z2 <= n1+n2)) - 1) * n2 + (Z2[(Z2 > n1) & (Z2 <= n1+n2)] - n1)
-  #                 ((what records in file 3 have links in file 2?) - 1) * n2
-  #                 + (what records in file 2 are they linked to?)
+  matchrows.1to3 <- matchrows(cmp.1to3, Z2, offset=0)
+  matchrows.2to3 <- matchrows(cmp.2to3, Z2, offset=cmp.1to3$n1)
   # 2. Which rows of cmp.2to3 are not candidate links?
-  # Any pairs (i,j) where i is a record in file 1 with a link in file 2, and j
-  # is *any* record in file 3.
-  noncand.1to3 <- c(outer((seq_len(n3) - 1) * n1, Z[Z <= n1], "+"))
+  noncand.1to3 <- noncandrows(cmp.1to3, Z, offset=0)
   # 3. Compute filtered column sums: for match and nonmatch pairs, how many times
   #    does a given level of a given field appear?
-  total.count <- attr(cmp.1to3, "totals") + attr(cmp.2to3, "totals")
-  match.count <- colSums(cmp.1to3[matchrows.1to3,,drop=FALSE]) + colSums(cmp.2to3[matchrows.2to3,,drop=FALSE])
-  nonmatch.count <- total.count - match.count - colSums(cmp.1to3[noncand.1to3,,drop=FALSE])
+  total.count <- attr(cmp.1to3$comparisons, "totals") + attr(cmp.2to3$comparisons, "totals")
+  match.count <- colSums(cmp.1to3$comparisons[matchrows.1to3,,drop=FALSE]) + colSums(cmp.2to3$comparisons[matchrows.2to3,,drop=FALSE])
+  nonmatch.count <- total.count - match.count - colSums(cmp.1to3$comparisons[noncand.1to3,,drop=FALSE])
   # 4. Calculate and return log likelihood based on count of field levels for
   #    matches and non-matches
   loglkl <- (
@@ -33,26 +27,15 @@ calc.log.lkl <- function(cmp.1to3, cmp.2to3, n1, n2, n3, m, u, Z, Z2) {
 # Function to calculate the likelihood of new data from given parameter values
 # This likelihood function will trace links transitively instead of excluding
 # non-candidates.
-calc.log.lkl.tracing <- function(cmp.1to3, cmp.2to3, n1, n2, n3, m, u, Z, Z2) {
+calc.log.lkl.tracing <- function(cmp.1to3, cmp.2to3, m, u, Z, Z2) {
   # 1. Which rows of cmp.2to3 correspond to matches?
-  matchrows.2to3 <- (which((Z2 > n1) & (Z2 <= n1+n2)) - 1) * n2 + (Z2[(Z2 > n1) & (Z2 <= n1+n2)] - n1)
-  #                 ((what records in file 3 have links in file 2?) - 1) * n2
-  #                 + (what records in file 2 are they linked to?)
+  matchrows.2to3 <- matchrows(cmp.2to3, Z2, offset=cmp.1to3$n1)
   # 2. Which rows of cmp.1to3 correspond to matches (traced or direct?) matches?
-  # First, create a copy of Z2 except following traced links where applicable.
-  # I.e., any links to file 2 should be replaced with a record in file 1, if the linked
-  # records in file 2 are further linked to file 1. Take advantage of the fact that
-  # unlinked records essentially point to themselves.
-  Z2.traced <- Z2
-  Z2.traced[which((Z2 > n1) & (Z2 <= n1+n2))] <- Z[Z2[which((Z2 > n1) & (Z2 <= n1+n2))] - n1]
-  # Now, use this new Z2 copy to find match rows
-  matchrows.1to3 <- (which(Z2.traced <= n1) - 1) * n1 + Z2.traced[Z2.traced <= n1]
-  #                 ((what records in file 3 have links in file 1?) - 1) * n1
-  #                 + (what records in file 1 are they linked to?)
+  matchrows.1to3 <- matchrows(cmp.1to3, traced(Z2, Z, steps=1, offset=cmp.1to3$n1), offset=0)
   # 3. Compute filtered column sums: for match and nonmatch pairs, how many times
   #    does a given level of a given field appear?
-  total.count <- attr(cmp.1to3, "totals") + attr(cmp.2to3, "totals")
-  match.count <- colSums(cmp.1to3[matchrows.1to3,,drop=FALSE]) + colSums(cmp.2to3[matchrows.2to3,,drop=FALSE])
+  total.count <- attr(cmp.1to3$comparisons, "totals") + attr(cmp.2to3$comparisons, "totals")
+  match.count <- colSums(cmp.1to3$comparisons[matchrows.1to3,,drop=FALSE]) + colSums(cmp.2to3$comparisons[matchrows.2to3,,drop=FALSE])
   nonmatch.count <- total.count - match.count # (no need to remove non-candidiates when link tracing)
   # 4. Calculate and return log likelihood based on count of field levels for
   #    matches and non-matches
