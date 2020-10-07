@@ -55,6 +55,7 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
   m.samples[,1] <- bipartite.samp$m[,startidx]
   u.samples[,1] <- bipartite.samp$u[,startidx]
   Z.samples[,1] <- bipartite.samp$Z[,startidx]
+  Z.curr.idx <- startidx # Keep track of index of current Z in previous samples
   Z2.samples[,1] <- n1 + n2 + seq_len(n3)
   # Create array to hold record of acceptances: first row = m,u,Z. second row = Z2
   # Contains all 1's by default, zeros written on rejection
@@ -75,6 +76,7 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
     u.curr <- u.samples[,i-1]
     Z.curr <- Z.samples[,i-1]
     Z2.curr <- Z2.samples[,i-1]
+
     # 7.1: Propose new m,u,Z collectively from PPRB
     if (pprb.method == "resampled") {
       # Go through all bipartite samples until you find one that is a valid
@@ -83,42 +85,38 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
       # have probability zero in the target so we can avoid proposing them.
       for (j in sample(ncol(bipartite.samp$Z))) {
         if (valid.link.state(n1, bipartite.samp$Z[,j], Z2.curr)) {
-          break # Leaves j at its current value outside the loop
+          Z.prop.idx <- j
+          break
         }
       }
-      m.prop <- bipartite.samp$m[,j]
-      u.prop <- bipartite.samp$u[,j]
-      Z.prop <- bipartite.samp$Z[,j]
     } else {
       # What value should be proposed?
       if (pprb.method == "permuted") {
-        m.prop <- bipartite.samp$m[,pprb.index[i]]
-        u.prop <- bipartite.samp$u[,pprb.index[i]]
-        Z.prop <- bipartite.samp$Z[,pprb.index[i]]
+        Z.prop.idx <- pprb.index[i]
       } else {
         # Ordered
-        m.prop <- bipartite.samp$m[,i]
-        u.prop <- bipartite.samp$u[,i]
-        Z.prop <- bipartite.samp$Z[,i]
+        Z.prop.idx <- i
       }
     }
+    Z.prop <- bipartite.samp$Z[,Z.prop.idx]
     # What is the log of the MH acceptance ratio?
     log.alpha1 <- (
-      ell(comparisons.1to3, comparisons.2to3, m.prop, u.prop, Z.prop, Z2.curr)
+      ell(comparisons.1to3, comparisons.2to3, m.curr, u.curr, Z.prop, Z2.curr)
       - ell(comparisons.1to3, comparisons.2to3, m.curr, u.curr, Z.curr, Z2.curr)
       + calc.log.Z2prior(n1, n2, n3, Z2.curr, Z.prop, aBM, bBM)
       - calc.log.Z2prior(n1, n2, n3, Z2.curr, Z.curr, aBM, bBM)
+      + ddirichlet.multi(m.curr, bipartite.samp$m.fc.pars[,Z.prop.idx] + a, comparisons.1to3$nDisagLevs, log=TRUE)
+      + ddirichlet.multi(u.curr, bipartite.samp$u.fc.pars[,Z.prop.idx] + b, comparisons.1to3$nDisagLevs, log=TRUE)
+      - ddirichlet.multi(m.curr, bipartite.samp$m.fc.pars[,Z.curr.idx] + a, comparisons.1to3$nDisagLevs, log=TRUE)
+      - ddirichlet.multi(u.curr, bipartite.samp$u.fc.pars[,Z.curr.idx] + b, comparisons.1to3$nDisagLevs, log=TRUE)
     )
     # Decide whether to accept new values
     if (-rexp(1) < log.alpha1) {
       # accept
-      m.samples[,i] <- m.prop
-      u.samples[,i] <- u.prop
       Z.samples[,i] <- Z.prop
+      Z.curr.idx <- Z.prop.idx
     } else {
       # reject
-      m.samples[,i] <- m.curr
-      u.samples[,i] <- u.curr
       Z.samples[,i] <- Z.curr
       accepted[1,i] <- 0
       if (log.alpha1 == -Inf) {
@@ -126,10 +124,16 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
       }
     }
     # Reset "current" values of parameters
-    m.curr <- m.samples[,i]
-    u.curr <- u.samples[,i]
     Z.curr <- Z.samples[,i]
-    # 7.2: Propose new Z2
+
+    # 7.2: Draw new m, u from full conditional distributions
+    tmp <- r_m_u_fc(comparisons.1to3, comparisons.2to3, Z.curr, Z2.curr, a, b,
+                    bipartite.samp$m.fc.pars[,Z.curr.idx],
+                    bipartite.samp$u.fc.pars[,Z.curr.idx])
+    m.samples[,i] <- m.curr <- tmp$m
+    u.samples[,i] <- u.curr <- tmp$u
+
+    # 7.3: Propose new Z2
     tmp <- draw.Z2.informed(n1, n2, n3, Z.curr, Z2.curr, m.curr, u.curr,
                             comparisons.1to3, comparisons.2to3,
                             aBM, bBM, trace=trace, blocksize=Z2blocksize)
@@ -150,6 +154,7 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
       Z2.samples[,i] <- Z2.curr
       accepted[2,i] <- 0
     }
+
     # Print updates
     if (i  %% max(nIter.tri %/% 20, 1) == 0) {
       cat("Iteration ", i, "\n")
