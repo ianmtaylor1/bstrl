@@ -63,6 +63,8 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
   # Creates array to track impossible proposals: proposals of m,u,Z from pprb
   # which have probability zero
   pprb.impossible <- rep(0, nIter.tri)
+  # Track how different Z1 proposals are from the current value
+  Zprop.diffs <- rep(0, nIter.tri)
   # Choose the likelihood function based on tracing flag
   if (trace) {
     ell <- calc.log.lkl.tracing
@@ -99,6 +101,8 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
       }
     }
     Z.prop <- bipartite.samp$Z[,Z.prop.idx]
+    # How different is z.prop from z.curr?
+    Zprop.diffs[i] <- sum(Z.prop != Z.curr)
     # What is the log of the MH acceptance ratio?
     log.alpha1 <- (
       ell(comparisons.1to3, comparisons.2to3, m.curr, u.curr, Z.prop, Z2.curr)
@@ -168,7 +172,8 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
               m=m.samples[,keptsamples,drop=FALSE],
               u=u.samples[,keptsamples,drop=FALSE],
               accepted=accepted[,keptsamples,drop=FALSE],
-              pprb.impossible=pprb.impossible[keptsamples]))
+              pprb.impossible=pprb.impossible[keptsamples],
+              Zprop.diffs=Zprop.diffs[keptsamples]))
 }
 
 #' @export
