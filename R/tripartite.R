@@ -60,11 +60,14 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
   # Create array to hold record of acceptances: first row = m,u,Z. second row = Z2
   # Contains all 1's by default, zeros written on rejection
   accepted <- matrix(1, nrow=2, ncol=nIter.tri)
+  rownames(accepted) <- c("PPRB Z", "Locally Balanced Z2")
   # Creates array to track impossible proposals: proposals of m,u,Z from pprb
   # which have probability zero
   pprb.impossible <- rep(0, nIter.tri)
   # Track how different Z1 proposals are from the current value
   Zprop.diffs <- rep(0, nIter.tri)
+  # Track the PPRB acceptance ratio
+  pprb.log.ratio <- rep(0, nIter.tri)
   # Choose the likelihood function based on tracing flag
   if (trace) {
     ell <- calc.log.lkl.tracing
@@ -114,6 +117,8 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
       - ddirichlet.multi(m.curr, bipartite.samp$m.fc.pars[,Z.curr.idx] + a, comparisons.1to3$nDisagLevs, log=TRUE)
       - ddirichlet.multi(u.curr, bipartite.samp$u.fc.pars[,Z.curr.idx] + b, comparisons.1to3$nDisagLevs, log=TRUE)
     )
+    # Store the ratio
+    pprb.log.ratio[i] <- log.alpha1
     # Decide whether to accept new values
     if (-rexp(1) < log.alpha1) {
       # accept
@@ -173,7 +178,8 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
               u=u.samples[,keptsamples,drop=FALSE],
               accepted=accepted[,keptsamples,drop=FALSE],
               pprb.impossible=pprb.impossible[keptsamples],
-              Zprop.diffs=Zprop.diffs[keptsamples]))
+              Zprop.diffs=Zprop.diffs[keptsamples],
+              pprb.log.ratio=pprb.log.ratio[keptsamples]))
 }
 
 #' @export
