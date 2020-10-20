@@ -79,8 +79,16 @@ calc.log.Z2prior <- function(n1, n2, n3, Z2, Z, aBM, bBM) {
 # Determines whether the given values of Z, Z2 are viable according to the
 # candidate set rules. I.e. returns true if no records are linked to the same
 # record in file 1. Else returns false.
-valid.link.state <- function(n1, Z, Z2) {
-  noncand <- Z[Z <= n1] # Non-candidates: records in file 1 with links
+# Parameters:
+#   Z2 = links involving the most recent file
+#   Z = links between all previous files
+#   offset = An offset of the starting position of the indices of Z. Any records
+#            with indices less than or equal to offset are assumed to be the end
+#            of their chain. This can be used to exclude file 1, for example, if
+#            its links are excluded from Z to save space
+# Notes: assumption is that if a record j is unlinked then Z[j - offset] == j
+valid.link.state <- function(offset, Z, Z2) {
+  noncand <- Z[Z <= offset + seq_len(length(Z))] # Non-candidates: records with links in later files
   return(!any(Z2 %in% noncand))
 }
 
