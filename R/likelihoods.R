@@ -1,48 +1,80 @@
 # This file contains functions to calculate likelihoods and priors during
 # tripartite record linkage.
 
-# Function to calculate the likelihood of new data from given parameter values
-# cmp.1to3 and cmp.2to3 are the comparison objects from the output of
-# BRL::compareRecords
-calc.log.lkl <- function(cmp.1to3, cmp.2to3, m, u, Z, Z2) {
-  # 1. Which rows of cmp.1to3 and cmp.2to3 correspond to matches?
-  matchrows.1to3 <- matchrows(cmp.1to3, Z2, offset=0)
-  matchrows.2to3 <- matchrows(cmp.2to3, Z2, offset=cmp.1to3$n1)
-  # 2. Which rows of cmp.2to3 are not candidate links?
-  noncand.1to3 <- noncandrows(cmp.1to3, Z, offset=0)
-  # 3. Compute filtered column sums: for match and nonmatch pairs, how many times
-  #    does a given level of a given field appear?
-  total.count <- attr(cmp.1to3$comparisons, "totals") + attr(cmp.2to3$comparisons, "totals")
-  match.count <- colSums(cmp.1to3$comparisons[matchrows.1to3,,drop=FALSE]) + colSums(cmp.2to3$comparisons[matchrows.2to3,,drop=FALSE])
-  nonmatch.count <- total.count - match.count - colSums(cmp.1to3$comparisons[noncand.1to3,,drop=FALSE])
-  # 4. Calculate and return log likelihood based on count of field levels for
-  #    matches and non-matches
-  loglkl <- (
-    sum(match.count * log(m))
-    + sum(nonmatch.count * log(u))
-  )
+# Function to calculate the likelihood of new data from given parameter values.
+# Operates on comparisons between a file k and all k-1 previous files (k-1 total
+# comparison objects)
+# Parameters:
+#   cmpdata - a list of comparison data objects. There are k-1 total objects
+#             in the list. The first compares file 1 to file k, and so on, until
+#             the last which compares file k-1 to file k. All objects should
+#             therefore have equal n2 values.
+#   m,u,Z,Z2 - parameter values. Z2 is the links originating from file k, and Z
+#              is the links originating from files 2 through k-1, concatenated
+#              together (file 1 is excluded because it's unnecessary under the
+#              assumption of no duplicates within files.)
+calc.log.lkl <- function(cmpdata, m, u, Z, Z2) {
+  # How many files are we dealing with?
+  nfiles <- length(cmpdata) + 1
+  # Which records in files 1 through nfiles-1 are not candidates? i.e. are matched
+  # to by a later file already according to Z
+  n1 <- cmpdata[[1]]$n1
+  noncand <- Z[Z <= n1 + seq_len(length(Z))]
+  # Loop through each previous file and accumulate log likelihood
+  loglkl <- 0
+  totalprevrecords <- 0
+  for (file in 1:(nfiles-1)) {
+    # Which rows in this comparison object correspond to matches?
+    filematchrows <- matchrows(cmpdata[[file]], Z2, offset=totalprevrecords)
+    match.count <- colSums(cmpdata[[file]]$comparisons[filematchrows,,drop=FALSE])
+    # Which rows in this comparison object correspond to non-candidates?
+    filenoncandrows <- noncandrows(cmpdata[[file]], Z=noncand, offset=totalprevrecords)
+    noncand.count <- colSums(cmpdata[[file]]$comparisons[filenoncandrows,,drop=FALSE])
+    # Which rows does that leave for nonmatches?
+    nonmatch.count <- attr(cmpdata[[file]]$comparisons, "totals") - match.count - noncand.count
+    # Update the log likelihood
+    loglkl <- loglkl + sum(match.count * log(m)) + sum(nonmatch.count + log(u))
+    # Update the number of records in previous files
+    totalprevrecords <- totalprevrecords + cmpdata[[file]]$n1
+  }
+  # After going through all files, return the total log likelihood
   return(loglkl)
 }
 
 # Function to calculate the likelihood of new data from given parameter values
 # This likelihood function will trace links transitively instead of excluding
 # non-candidates.
-calc.log.lkl.tracing <- function(cmp.1to3, cmp.2to3, m, u, Z, Z2) {
-  # 1. Which rows of cmp.2to3 correspond to matches?
-  matchrows.2to3 <- matchrows(cmp.2to3, Z2, offset=cmp.1to3$n1)
-  # 2. Which rows of cmp.1to3 correspond to matches (traced or direct?) matches?
-  matchrows.1to3 <- matchrows(cmp.1to3, trace(Z2, Z, steps=1, offset=cmp.1to3$n1), offset=0)
-  # 3. Compute filtered column sums: for match and nonmatch pairs, how many times
-  #    does a given level of a given field appear?
-  total.count <- attr(cmp.1to3$comparisons, "totals") + attr(cmp.2to3$comparisons, "totals")
-  match.count <- colSums(cmp.1to3$comparisons[matchrows.1to3,,drop=FALSE]) + colSums(cmp.2to3$comparisons[matchrows.2to3,,drop=FALSE])
-  nonmatch.count <- total.count - match.count # (no need to remove non-candidiates when link tracing)
-  # 4. Calculate and return log likelihood based on count of field levels for
-  #    matches and non-matches
-  loglkl <- (
-    sum(match.count * log(m))
-    + sum(nonmatch.count * log(u))
-  )
+# Parameters:
+#   cmpdata - a list of comparison data objects. There are k-1 total objects
+#             in the list. The first compares file 1 to file k, and so on, until
+#             the last which compares file k-1 to file k. All objects should
+#             therefore have equal n2 values.
+#   m,u,Z,Z2 - parameter values. Z2 is the links originating from file k, and Z
+#              is the links originating from files 2 through k-1, concatenated
+#              together (file 1 is excluded because it's unnecessary under the
+#              assumption of no duplicates within files.)
+calc.log.lkl.tracing <- function(cmpdata, m, u, Z, Z2) {
+  # How many files are we dealing with?
+  nfiles <- length(cmpdata) + 1
+  # How many records are in the first file? (needed later for tracing)
+  n1 <- cmpdata[[1]]$n1
+  # Loop through each previous file and accumulate log likelihood
+  loglkl <- 0
+  totalprevrecords <- 0
+  for (file in 1:(nfiles-1)) {
+    # Which rows in this comparison object correspond to matches?
+    # Need to trace one less than the file difference between the two compared files
+    Z2.traced <- trace(Z2, Z, steps=nfiles - file - 1, offset=n1)
+    filematchrows <- matchrows(cmpdata[[file]], Z2.traced, offset=totalprevrecords)
+    match.count <- colSums(cmpdata[[file]]$comparisons[filematchrows,,drop=FALSE])
+    # Which rows does that leave for nonmatches?
+    nonmatch.count <- attr(cmpdata[[file]]$comparisons, "totals") - match.count
+    # Update the log likelihood
+    loglkl <- loglkl + sum(match.count * log(m)) + sum(nonmatch.count + log(u))
+    # Update the number of records in previous files
+    totalprevrecords <- totalprevrecords + cmpdata[[file]]$n1
+  }
+  # After going through all files, return the total log likelihood
   return(loglkl)
 }
 
@@ -52,18 +84,29 @@ calc.log.lkl.tracing <- function(cmp.1to3, cmp.2to3, m, u, Z, Z2) {
 # In R, negative infinity plus any finite value equals negative infinity, and all
 # finite values compare greater than negative infinity. So this value can be used
 # in acceptance ratio computations without worrying.
-calc.log.Z2prior <- function(n1, n2, n3, Z2, Z, aBM, bBM) {
+# Parameters:
+#       n1 - Number of records in file 1
+#       Z,Z2 - parameter values. Z2 is the links originating from file k, and Z
+#              is the links originating from files 2 through k-1, concatenated
+#              together (file 1 is excluded because it's unnecessary under the
+#              assumption of no duplicates within files.)
+#       aBM, bBM - prior parameters for beta link prior
+# Notes:
+#   Assumes length(Z2) <= n1 + length(Z) !!!
+calc.log.Z2prior <- function(n1, Z2, Z, aBM, bBM) {
   # Calculate the log of the prior and return
   if (valid.link.state(n1, Z, Z2)) {
+    nprev <- length(Z) # Total records in previous files except file 1
+    nlast <- length(Z2) # Records in the most recent file
     # Candidates are any unlinked entries in file 1, plus all entries in file 2
-    cand <- c(setdiff(seq_len(n1), Z), n1 + seq_len(n2))
+    ncand <- n1 + nprev - sum(Z <= n1 + seq_len(nprev))
     # How many links are there currently between file 3 and the candidate set?
-    nlinked <- sum(Z2 <= n1 + n2)
+    nlinked <- sum(Z2 <= n1 + nprev)
     # Work in log scale: replacing log(x!) with lgamma(x+1) and log(beta(a,b))
     # with lbeta(a,b)
     logprior <- (
-      (lgamma(length(cand) - nlinked + 1) - lgamma(length(cand) + 1))
-      + (lbeta(aBM + nlinked, bBM + n3 - nlinked) - lbeta(aBM, bBM))
+      (lgamma(ncand - nlinked + 1) - lgamma(ncand + 1))
+      + (lbeta(aBM + nlinked, bBM + nlast - nlinked) - lbeta(aBM, bBM))
     )
     return(logprior)
   } else {
