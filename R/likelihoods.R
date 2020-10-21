@@ -61,7 +61,7 @@ calc.log.Z2prior <- function(n1, Z2, Z, aBM, bBM) {
     nprev <- length(Z) # Total records in previous files except file 1
     nlast <- length(Z2) # Records in the most recent file
     # Candidates are any unlinked entries in file 1, plus all entries in file 2
-    ncand <- n1 + nprev - sum(Z <= n1 + seq_len(nprev))
+    ncand <- n1 + nprev - sum(Z < n1 + seq_len(nprev))
     # How many links are there currently between file 3 and the candidate set?
     nlinked <- sum(Z2 <= n1 + nprev)
     # Work in log scale: replacing log(x!) with lgamma(x+1) and log(beta(a,b))
@@ -93,7 +93,7 @@ calc.log.Z2prior <- function(n1, Z2, Z, aBM, bBM) {
 #            its links are excluded from Z to save space
 # Notes: assumption is that if a record j is unlinked then Z[j - offset] == j
 valid.link.state <- function(offset, Z, Z2) {
-  noncand <- Z[Z <= offset + seq_len(length(Z))] # Non-candidates: records with links in later files
+  noncand <- Z[Z < offset + seq_len(length(Z))] # Non-candidates: records with links in later files
   return(!any(Z2 %in% noncand))
 }
 

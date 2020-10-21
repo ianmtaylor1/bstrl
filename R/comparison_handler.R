@@ -28,7 +28,7 @@ disag.counts <- function(cmpdata, Z, Z2, do.trace) {
   # Which records in files 1 through nfiles-1 are not candidates? i.e. are matched
   # to by a later file already according to Z
   n1 <- cmpdata[[1]]$n1
-  noncand <- Z[Z <= n1 + seq_len(length(Z))]
+  noncand <- Z[Z < n1 + seq_len(length(Z))]
   # Loop through each previous file and accumulate log likelihood
   tot.match.count <- tot.nonmatch.count <- rep(0, sum(cmpdata[[1]]$nDisagLevs))
   totalprevrecords <- 0
