@@ -13,32 +13,15 @@
 #              is the links originating from files 2 through k-1, concatenated
 #              together (file 1 is excluded because it's unnecessary under the
 #              assumption of no duplicates within files.)
-calc.log.lkl <- function(cmpdata, m, u, Z, Z2) {
-  # How many files are we dealing with?
-  nfiles <- length(cmpdata) + 1
-  # Which records in files 1 through nfiles-1 are not candidates? i.e. are matched
-  # to by a later file already according to Z
-  n1 <- cmpdata[[1]]$n1
-  noncand <- Z[Z <= n1 + seq_len(length(Z))]
-  # Loop through each previous file and accumulate log likelihood
-  loglkl <- 0
-  totalprevrecords <- 0
-  for (file in 1:(nfiles-1)) {
-    # Which rows in this comparison object correspond to matches?
-    filematchrows <- matchrows(cmpdata[[file]], Z2, offset=totalprevrecords)
-    match.count <- colSums(cmpdata[[file]]$comparisons[filematchrows,,drop=FALSE])
-    # Which rows in this comparison object correspond to non-candidates?
-    filenoncandrows <- noncandrows(cmpdata[[file]], Z=noncand, offset=totalprevrecords)
-    noncand.count <- colSums(cmpdata[[file]]$comparisons[filenoncandrows,,drop=FALSE])
-    # Which rows does that leave for nonmatches?
-    nonmatch.count <- attr(cmpdata[[file]]$comparisons, "totals") - match.count - noncand.count
-    # Update the log likelihood
-    loglkl <- loglkl + sum(match.count * log(m)) + sum(nonmatch.count + log(u))
-    # Update the number of records in previous files
-    totalprevrecords <- totalprevrecords + cmpdata[[file]]$n1
-  }
-  # After going through all files, return the total log likelihood
-  return(loglkl)
+#   do.trace - Whether to perform link tracing
+# Notes:
+#   Eventually, I want to deprecate calc.log.lkl.tracing in favor of just using
+#   this function with the flag. But it's fine for now.
+calc.log.lkl <- function(cmpdata, m, u, Z, Z2, do.trace=FALSE) {
+  # Calculate the disagreement level counts
+  counts <- disag.counts(cmpdata, Z, Z2, do.trace)
+  # The log likelihood is these counts combined with log m and log u
+  return(sum(counts$match * log(m)) + sum(counts$nonmatch * log(u)))
 }
 
 # Function to calculate the likelihood of new data from given parameter values
@@ -54,28 +37,7 @@ calc.log.lkl <- function(cmpdata, m, u, Z, Z2) {
 #              together (file 1 is excluded because it's unnecessary under the
 #              assumption of no duplicates within files.)
 calc.log.lkl.tracing <- function(cmpdata, m, u, Z, Z2) {
-  # How many files are we dealing with?
-  nfiles <- length(cmpdata) + 1
-  # How many records are in the first file? (needed later for tracing)
-  n1 <- cmpdata[[1]]$n1
-  # Loop through each previous file and accumulate log likelihood
-  loglkl <- 0
-  totalprevrecords <- 0
-  for (file in 1:(nfiles-1)) {
-    # Which rows in this comparison object correspond to matches?
-    # Need to trace one less than the file difference between the two compared files
-    Z2.traced <- trace(Z2, Z, steps=nfiles - file - 1, offset=n1)
-    filematchrows <- matchrows(cmpdata[[file]], Z2.traced, offset=totalprevrecords)
-    match.count <- colSums(cmpdata[[file]]$comparisons[filematchrows,,drop=FALSE])
-    # Which rows does that leave for nonmatches?
-    nonmatch.count <- attr(cmpdata[[file]]$comparisons, "totals") - match.count
-    # Update the log likelihood
-    loglkl <- loglkl + sum(match.count * log(m)) + sum(nonmatch.count + log(u))
-    # Update the number of records in previous files
-    totalprevrecords <- totalprevrecords + cmpdata[[file]]$n1
-  }
-  # After going through all files, return the total log likelihood
-  return(loglkl)
+  return(calc.log.lkl(cmpdata, m, u, Z, Z2, do.trace=TRUE))
 }
 
 # Function to calculate the log of the prior of Z2 given Z and the hyperparameters
@@ -135,94 +97,3 @@ valid.link.state <- function(offset, Z, Z2) {
   return(!any(Z2 %in% noncand))
 }
 
-# Determines which rows in comparison data correspond to matches, according to
-# the match vector supplied
-# Parameters:
-#   cmpdata = comparison data in the format returned by BRL::compareRecords
-#   Z2 = a vector of matches the length of "file 2" in the comparison data. Each
-#        entry is for an element of "file 2"
-#   offset = an integer equal to the total number of records in files "earlier"
-#            than "file 1" in the comparison data. This offset is essentially
-#            subtracted from the values of Z2 to rule out matches with any of
-#            these earlier files.
-# Example usage:
-#   In a streaming setting, cmpdata compares file 3 to file 5. The file sizes are
-#   n1, n2, n3, n4, and n5 respectively. Z2 is a vector of length n5 with values
-#   from 1 to n1+n2+n3+n4+n5. Values between n1+n2+1 and n1+n2+n3 represent the
-#   links with file 3. Values larger than n1+n2+n3+n4 represent unlinked records
-#   You would call
-#     matchrows(cmpdata, Z2, offset=n1+n2)
-#   to return the rows in cmpdata the correspond to matches between file 3 and
-#   file 5.
-# Notes:
-#   Link tracing is not done. Link tracing must be pre-incorporated into Z2.
-matchrows <- function(cmpdata, Z2, offset=0) {
-  n1 <- cmpdata$n1
-  n2 <- cmpdata$n2
-  # Check that we have a correct Z2
-  if (length(Z2) != n2) {
-    stop("matchrows() - length of Z2 does not match cmpdata's file 2")
-  }
-  # Boolean index of records in "file 2" which are linked to "file 1"
-  linked <- (Z2 > offset) & (Z2 <= offset+n1)
-  # For links, return j*n1 + i (subtracting offset from i)
-  return((which(linked) - 1) * n1 + (Z2[linked] - offset))
-}
-
-# Determines which rows in comparison data correspond to noncandidates, according to
-# the match vector supplied
-# Parameters:
-#   cmpdata = comparison data in the format returned by BRL::compareRecords. The
-#             "file 1" in this structure corresponds to a file number m, and
-#             "file 2" corresponds to a file number k > m
-#   Z = a vector of matches. Its length is unimportant, but it must obey this
-#       constraint: An index i appears in Z, corresponding to a record in
-#       cmpdata's "file 1", IF AND ONLY IF it is linked to by a record in some
-#       file numbered l, m < l < k. I.e. if an index i appears in Z then that
-#       record is not a candidate.
-#   offset = an integer equal to the total number of records in files "earlier"
-#            than "file 1" in the comparison data.
-# Example usage:
-#   In a streaming setting, cmpdata compares file 2 to file 5. The file sizes are
-#   n1, n2, n3, n4, and n5 respectively. Z is a vector of length n3+n4 with values
-#   from 1 to n1+n2+n3+n4. Values between n1+1 and n1+n2 represent the
-#   links with file 2.
-#   You would call
-#     noncandrows(cmpdata, Z, offset=n1)
-#   to return the rows in cmpdata that correspond to matches involving a record
-#   in file 2 which are not candidates.
-noncandrows <- function(cmpdata, Z=c(), offset=0) {
-  n1 <- cmpdata$n1
-  n2 <- cmpdata$n2
-  # Indices of records in "file 1" which are linked to by the vector Z
-  noncand.records <- Z[(Z > offset) & (Z <= offset+n1)]
-  # Non-candidate pairs are any pair involving any of these records
-  return(c(outer((seq_len(n2) - 1) * n1, noncand.records, "+")))
-}
-
-# Function to return a link-traced version of the link vector Z2, following down
-# the vector Z for the given number of steps
-# Parameters:
-#   Z2 = The vector to be traced
-#   Z = The vector containing the next steps to be followed
-#   steps = The number of additional steps to take
-#   offset = An offset of the starting position of the indices of Z. Any records
-#            with indices less than or equal to offset are assumed to be the end
-#            of their chain. This can be used to exclude file 1, for example, if
-#            its links are excluded from Z to save space
-# Returns:
-#   Z2, but with links traces 'steps' further steps according to the links
-#   defined in Z.
-trace <- function(Z2, Z=Z2, steps=0, offset=0) {
-  # Vector which will be updated with traces
-  Z2.traced <- Z2
-  n.prev.records <- length(Z) + offset
-  for (step in 1:steps) {
-    # At this step, which records are linked to previous records which can be
-    # further traced?
-    traceable <- (Z2.traced > offset) & (Z2.traced <= n.prev.records)
-    # Follow one more step with Z
-    Z2.traced[traceable] <- Z[Z2.traced[traceable] - offset]
-  }
-  Z2.traced
-}
