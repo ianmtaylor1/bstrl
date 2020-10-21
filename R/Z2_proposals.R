@@ -45,12 +45,12 @@ draw.Z2.informed <- function(cmpdata,
   # Required file sizes
   n1 <- cmpdata[[1]]$n1
   nlast <- cmpdata[[1]]$n2
-  nprev <- 0
+  nprev <- 0 # Or nprev <- n1 + length(Z)
   for (file in 1:length(cmpdata)) {
     nprev <- nprev + cmpdata[[file]]$n1
   }
   # Candidates are any unlinked entries in file 1, plus all entries in file 2
-  cand <- setdiff(seq_len(n1 + length(Z)), Z[Z < n1 + seq_len(length(Z))])
+  cand <- setdiff(seq_len(nprev), Z[Z < n1 + seq_len(length(Z))])
   # Shrink possibilities down to blocksize
   blocks <- create.blocks(blocksize, nprev, cand, Z2.curr)
   while ((length(blocks$iblock) == 0) || (length(blocks$jblock) == 0)) {
