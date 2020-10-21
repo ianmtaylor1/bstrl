@@ -28,9 +28,9 @@ r_m_u_fc <- function(cmpdata, Z, Z2,
   m.new.pars <- counts$match
   u.new.pars <- counts$nonmatch
   # 2. combine a, m.prev.pars and new m pars to sample m
-  m <- rdirichlet.multi(alpha=m.new.pars + m.prev.pars + a, groups=cmpdata.1to3$nDisagLevs)
+  m <- rdirichlet.multi(alpha=m.new.pars + m.prev.pars + a, groups=cmpdata[[1]]$nDisagLevs)
   # 3. combine b, u.prev.pars and new u pars to sample u
-  u <- rdirichlet.multi(alpha=u.new.pars + u.prev.pars + b, groups=cmpdata.1to3$nDisagLevs)
+  u <- rdirichlet.multi(alpha=u.new.pars + u.prev.pars + b, groups=cmpdata[[1]]$nDisagLevs)
   # 4. Put into list and return
   return(list(m=m, u=u))
 }
