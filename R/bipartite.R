@@ -31,6 +31,7 @@ bipartiteRL.precmp <- function(cmpdata, nIter=1000, burn=round(nIter*.1), a=1, b
   if (method == "BRL") {
     chain <- BRL::bipartiteGibbs(cmpdata, nIter, a, b, aBM, bBM, seed)
   } else if (method == "LB") {
+    set.seed(seed)
     # Draw initial values for m and u from the prior
     if (length(a) == 1) a <- rep(a, sum(cmpdata$nDisagLevs))
     if (length(b) == 1) b <- rep(b, sum(cmpdata$nDisagLevs))
