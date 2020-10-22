@@ -24,6 +24,9 @@ bipartiteRL.precmp <- function(cmpdata, nIter=1000, burn=round(nIter*.1), a=1, b
   if( !is.numeric(burn) | (burn<0) | (burn>=nIter) )
     stop("burn should be an integer that satisfies 0 <= burn < nIter")
 
+  # Preprocess the comparison data
+  cmpdata <- preproc.cmpdata(cmpdata)
+
   # Gibbs sampling from posterior of bipartite matchings
   if (method == "BRL") {
     chain <- BRL::bipartiteGibbs(cmpdata, nIter, a, b, aBM, bBM, seed)
@@ -41,7 +44,7 @@ bipartiteRL.precmp <- function(cmpdata, nIter=1000, burn=round(nIter*.1), a=1, b
     # Iterate through sampler
     for (i in 1:nIter) {
       # 1. Full conditional update of Z conditioned on m and u.
-      tmp <- draw.Z2.informed(list(cmpdata), c(), Z.curr, m, u, aBM, bBM, blocksize=blocksize)
+      tmp <- draw.Z2.informed(list(cmpdata), c(), Z.curr, m.curr, u.curr, aBM, bBM, blocksize=blocksize)
       Z.prop <- tmp$Z2
       mhmod <- tmp$mod
       log.alpha <- (
@@ -59,6 +62,10 @@ bipartiteRL.precmp <- function(cmpdata, nIter=1000, burn=round(nIter*.1), a=1, b
       tmp <- r_m_u_fc(list(cmpdata), c(), Z.curr, a, b, 0, 0)
       m.curr <- m.samples[,i] <- tmp$m
       u.curr <- u.samples[,i] <- tmp$u
+      # 3. Status?
+      if (i %% 100 == 0) {
+        cat(i,"\n")
+      }
     }
     # Put into same format as BRL
     chain <- list(m=m.samples, u=u.samples, Z=Z.samples)
