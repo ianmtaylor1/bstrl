@@ -64,8 +64,9 @@ bipartiteRL.precmp <- function(cmpdata, nIter=1000, burn=round(nIter*.1), a=1, b
       m.curr <- m.samples[,i] <- tmp$m
       u.curr <- u.samples[,i] <- tmp$u
       # 3. Status?
-      if (i %% 100 == 0) {
-        cat(i,"\n")
+      # Print updates
+      if (i  %% max(nIter %/% 20, 1) == 0) {
+        cat("Iteration ", i, "\n")
       }
     }
     # Put into same format as BRL
