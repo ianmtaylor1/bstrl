@@ -96,12 +96,11 @@ bipartiteRL.precmp <- function(cmpdata, nIter=1000, burn=round(nIter*.1), a=1, b
 }
 
 #' @export
-bipartiteRL <- function(df1, df2, flds=NULL, flds1=NULL, flds2=NULL, types=NULL, breaks=c(0,.25,.5),
-                      nIter=1000, burn=round(nIter*.1), a=1, b=1, aBM=1, bBM=1, seed=0){
+bipartiteRL <- function(df1, df2, flds=NULL, flds1=NULL, flds2=NULL, types=NULL, breaks=c(0,.25,.5), ...){
 
   # create comparison data
   myCompData <- BRL::compareRecords(df1, df2, flds, flds1, flds2, types, breaks)
 
   # Call the function for precompared records
-  BRL.gibbs.precmp(myCompData, nIter, burn, a, b, aBM, bBM, seed)
+  bipartiteRL.precmp(myCompData, ...)
 }
