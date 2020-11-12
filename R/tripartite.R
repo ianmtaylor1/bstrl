@@ -7,7 +7,7 @@
 #    at end of this function?
 #' @export
 tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=FALSE,
-                                nIter.bi=1200, burn.bi=round(nIter.bi*.1),
+                                nIter.bi=1200, burn.bi=round(nIter.bi*.1), bipartite.method="BRL",
                                 nIter.tri=nIter.bi-burn.bi, burn.tri=round(nIter.tri*.1),
                                 pprb.method="ordered", Z2blocksize=NULL,
                                 a=1, b=1, aBM=1, bBM=1, seed=0) {
@@ -29,21 +29,28 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
   n1 <- cmpdata.1to3$n1
   n2 <- cmpdata.2to3$n1
   n3 <- cmpdata.1to3$n2
+
   # 2. Do bipartite RL between df1 and df2 using bipartiteRL.gibbs()
   #    Do not burn anything now! Keep it all, and burn later
-  bipartite.samp <- bipartiteRL.precmp(cmpdata.1to2, nIter.bi, burn.bi, a, b, aBM, bBM, seed)
+  bipartite.samp <- bipartiteRL.precmp(cmpdata.1to2, nIter.bi, burn.bi, a, b, aBM, bBM, seed, method=bipartite.method, blocksize=Z2blocksize)
+
   # 3. Create precomputed data structures
   comparisons.1to3 <- preproc.cmpdata(cmpdata.1to3)
   comparisons.2to3 <- preproc.cmpdata(cmpdata.2to3)
+  cmpdata.list <- list(comparisons.1to3, comparisons.2to3)
+  nDisagLevs <- comparisons.1to3$nDisagLevs
+
   # 4. Set up empty arrays of the appropriate size that will eventually be returned
   m.samples  <- matrix(0, nrow=nrow(bipartite.samp$m), ncol=nIter.tri)
   u.samples  <- matrix(0, nrow=nrow(bipartite.samp$u), ncol=nIter.tri)
   Z.samples  <- matrix(0, nrow=nrow(bipartite.samp$Z), ncol=nIter.tri)
   Z2.samples <- matrix(0, nrow=n3,                     ncol=nIter.tri)
+
   # 5. If PPRB is permuted, produce a list of the proposal indexes by permuting
   if (pprb.method == "permuted") {
     pprb.index <- sample(nIter.tri) # Note: nIter.tri == nIter.bi - burn.bi necessarily
   }
+
   # 6. Initialize the first sample (m,u,Z: first sample from bipartite. Z2: unlinked)
   if (pprb.method == "resampled") {
     startidx <- sample(nIter.bi - burn.bi, size=1)
@@ -57,6 +64,7 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
   Z.samples[,1] <- bipartite.samp$Z[,startidx]
   Z.curr.idx <- startidx # Keep track of index of current Z in previous samples
   Z2.samples[,1] <- n1 + n2 + seq_len(n3)
+
   # Create array to hold record of acceptances: first row = m,u,Z. second row = Z2
   # Contains all 1's by default, zeros written on rejection
   accepted <- matrix(1, nrow=2, ncol=nIter.tri)
@@ -68,12 +76,7 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
   Zprop.diffs <- rep(0, nIter.tri)
   # Track the PPRB acceptance ratio
   pprb.log.ratio <- rep(0, nIter.tri)
-  # Choose the likelihood function based on tracing flag
-  if (trace) {
-    ell <- calc.log.lkl.tracing
-  } else {
-    ell <- calc.log.lkl
-  }
+
   # 7. Perform M-H for each iteration
   for (i in seq(2, nIter.tri)) {
     # What are the current values of the parameters?
@@ -82,7 +85,7 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
     Z.curr <- Z.samples[,i-1]
     Z2.curr <- Z2.samples[,i-1]
 
-    # 7.1: Propose new m,u,Z collectively from PPRB
+    # 7.1: Propose new Z from PPRB
     if (pprb.method == "resampled") {
       # Go through all bipartite samples until you find one that is a valid
       # link state, then propose that one. There is guaranteed to always be at
@@ -108,14 +111,14 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
     Zprop.diffs[i] <- sum(Z.prop != Z.curr)
     # What is the log of the MH acceptance ratio?
     log.alpha1 <- (
-      ell(comparisons.1to3, comparisons.2to3, m.curr, u.curr, Z.prop, Z2.curr)
-      - ell(comparisons.1to3, comparisons.2to3, m.curr, u.curr, Z.curr, Z2.curr)
-      + calc.log.Z2prior(n1, n2, n3, Z2.curr, Z.prop, aBM, bBM)
-      - calc.log.Z2prior(n1, n2, n3, Z2.curr, Z.curr, aBM, bBM)
-      + ddirichlet.multi(m.curr, bipartite.samp$m.fc.pars[,Z.prop.idx] + a, comparisons.1to3$nDisagLevs, log=TRUE)
-      + ddirichlet.multi(u.curr, bipartite.samp$u.fc.pars[,Z.prop.idx] + b, comparisons.1to3$nDisagLevs, log=TRUE)
-      - ddirichlet.multi(m.curr, bipartite.samp$m.fc.pars[,Z.curr.idx] + a, comparisons.1to3$nDisagLevs, log=TRUE)
-      - ddirichlet.multi(u.curr, bipartite.samp$u.fc.pars[,Z.curr.idx] + b, comparisons.1to3$nDisagLevs, log=TRUE)
+      calc.log.lkl(cmpdata.list, m.curr, u.curr, Z.prop, Z2.curr, do.trace=trace)
+      - calc.log.lkl(cmpdata.list, m.curr, u.curr, Z.curr, Z2.curr, do.trace=trace)
+      + calc.log.Z2prior(n1, Z2.curr, Z.prop, aBM, bBM)
+      - calc.log.Z2prior(n1, Z2.curr, Z.curr, aBM, bBM)
+      + ddirichlet.multi(m.curr, bipartite.samp$m.fc.pars[,Z.prop.idx] + a, nDisagLevs, log=TRUE)
+      + ddirichlet.multi(u.curr, bipartite.samp$u.fc.pars[,Z.prop.idx] + b, nDisagLevs, log=TRUE)
+      - ddirichlet.multi(m.curr, bipartite.samp$m.fc.pars[,Z.curr.idx] + a, nDisagLevs, log=TRUE)
+      - ddirichlet.multi(u.curr, bipartite.samp$u.fc.pars[,Z.curr.idx] + b, nDisagLevs, log=TRUE)
     )
     # Store the ratio
     pprb.log.ratio[i] <- log.alpha1
@@ -136,23 +139,22 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
     Z.curr <- Z.samples[,i]
 
     # 7.2: Draw new m, u from full conditional distributions
-    tmp <- r_m_u_fc(comparisons.1to3, comparisons.2to3, Z.curr, Z2.curr, a, b,
+    tmp <- r_m_u_fc(cmpdata.list, Z.curr, Z2.curr, a, b,
                     bipartite.samp$m.fc.pars[,Z.curr.idx],
                     bipartite.samp$u.fc.pars[,Z.curr.idx])
     m.samples[,i] <- m.curr <- tmp$m
     u.samples[,i] <- u.curr <- tmp$u
 
     # 7.3: Propose new Z2
-    tmp <- draw.Z2.informed(n1, n2, n3, Z.curr, Z2.curr, m.curr, u.curr,
-                            comparisons.1to3, comparisons.2to3,
+    tmp <- draw.Z2.informed(cmpdata.list, Z.curr, Z2.curr, m.curr, u.curr,
                             aBM, bBM, trace=trace, blocksize=Z2blocksize)
     Z2.prop <- tmp$Z2
     # Decide whether to accept new values
     log.alpha2 <- (
-      ell(comparisons.1to3, comparisons.2to3, m.curr, u.curr, Z.curr, Z2.prop)
-      - ell(comparisons.1to3, comparisons.2to3, m.curr, u.curr, Z.curr, Z2.curr)
-      + calc.log.Z2prior(n1, n2, n3, Z2.prop, Z.curr, aBM, bBM)
-      - calc.log.Z2prior(n1, n2, n3, Z2.curr, Z.curr, aBM, bBM)
+      calc.log.lkl(cmpdata.list, m.curr, u.curr, Z.curr, Z2.prop, do.trace=trace)
+      - calc.log.lkl(cmpdata.list, m.curr, u.curr, Z.curr, Z2.curr, do.trace=trace)
+      + calc.log.Z2prior(n1, Z2.prop, Z.curr, aBM, bBM)
+      - calc.log.Z2prior(n1, Z2.curr, Z.curr, aBM, bBM)
       + log(tmp$mod) # Modifier for proposal probability from the informed proposal
     )
     if (-rexp(1) < log.alpha2) {
@@ -186,11 +188,7 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
 tripartiteRL <- function(df1, df2, df3,
                          flds=NULL, flds1=NULL, flds2=NULL, flds3=NULL,
                          types=NULL, breaks=c(0,.25,.5),
-                         trace=FALSE,
-                         nIter.bi=1200, burn.bi=round(nIter.bi*.1),
-                         nIter.tri=nIter.bi-burn.bi, burn.tri=round(nIter.tri*.1),
-                         pprb.method="ordered", Z2blocksize=NULL,
-                         a=1, b=1, aBM=1, bBM=1, seed=0) {
+                         ...) {
   # Create comparison data using BRL::compareRecords
   cmpdata.1to2 <- compareRecords(df1, df2, flds, flds1=flds1, flds2=flds2,
                                  types=types, breaks=breaks)
@@ -199,10 +197,7 @@ tripartiteRL <- function(df1, df2, df3,
   cmpdata.2to3 <- compareRecords(df2, df3, flds, flds1=flds2, flds2=flds3,
                                  types=types, breaks=breaks)
   # Call function with precompared files
-  tripartiteRL.precmp(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace,
-                      nIter.bi, burn.bi, nIter.tri, burn.tri,
-                      pprb.method, Z2blocksize,
-                      a, b, aBM, bBM, seed)
+  tripartiteRL.precmp(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, ...)
 }
 
 
