@@ -3,33 +3,33 @@
 # uninformed, and local informed.
 
 
-# Function to draw Z2 from the predictive distribution, at a given iteration
-draw.Z2.global <- function(n1, n2, n3, Z, aBM, bBM) {
-  # Number of links comes from beta-binomial
-  nlinks <- rbinom(n=1, size=n3, prob=rbeta(n=1, aBM, bBM))
-  # Given the number of links, which records in file 3 will be linked?
-  link.from <- sample.int(n3, nlinks)
-  # Candidates are any unlinked entries in file 1, plus all entries in file 2
-  cand <- c(setdiff(seq_len(n1), Z), n1 + seq_len(n2))
-  # Randomly sample candidates to be linked
-  link.to <- cand[sample(length(cand), nlinks)]
-  # Construct Z2 initially as totally unlinked, then fill links as appropriate
-  Z2 <- n1 + n2 + seq_len(n3)
-  Z2[link.from] <- link.to
-  Z2
-}
+## Function to draw Z2 from the predictive distribution, at a given iteration
+#draw.Z2.global <- function(n1, n2, n3, Z, aBM, bBM) {
+#  # Number of links comes from beta-binomial
+#  nlinks <- rbinom(n=1, size=n3, prob=rbeta(n=1, aBM, bBM))
+#  # Given the number of links, which records in file 3 will be linked?
+#  link.from <- sample.int(n3, nlinks)
+#  # Candidates are any unlinked entries in file 1, plus all entries in file 2
+#  cand <- c(setdiff(seq_len(n1), Z), n1 + seq_len(n2))
+#  # Randomly sample candidates to be linked
+#  link.to <- cand[sample(length(cand), nlinks)]
+#  # Construct Z2 initially as totally unlinked, then fill links as appropriate
+#  Z2 <- n1 + n2 + seq_len(n3)
+#  Z2[link.from] <- link.to
+#  Z2
+#}
 
-# Draws Z2 as a local uninformed step based on an add/delete/swap move
-# Results in a symmetric proposal distribution
-draw.Z2.local <- function(n1, n2, n3, Z, Z2.curr) {
-  # Candidates are any unlinked entries in file 1, plus all entries in file 2
-  cand <- c(setdiff(seq_len(n1), Z), n1 + seq_len(n2))
-  # Pick an i and a j for the proposed move
-  i <- sample(n3, size=1)
-  j <- cand[sample(length(cand), 1)]
-  # Return the new Z2
-  return(perform.Z2.step(n1, n2, Z2.curr, i, j)$Z2)
-}
+## Draws Z2 as a local uninformed step based on an add/delete/swap move
+## Results in a symmetric proposal distribution
+#draw.Z2.local <- function(n1, n2, n3, Z, Z2.curr) {
+#  # Candidates are any unlinked entries in file 1, plus all entries in file 2
+#  cand <- c(setdiff(seq_len(n1), Z), n1 + seq_len(n2))
+#  # Pick an i and a j for the proposed move
+#  i <- sample(n3, size=1)
+#  j <- cand[sample(length(cand), 1)]
+#  # Return the new Z2
+#  return(perform.Z2.step(n1, n2, Z2.curr, i, j)$Z2)
+#}
 
 # Draws a proposal for Z2 using a locally-balanced pointwise-informed proposal
 # distribution based on Zanella (2020). The uninformed kernel K is a proposal
