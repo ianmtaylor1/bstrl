@@ -32,6 +32,7 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
 
   # 2. Do bipartite RL between df1 and df2 using bipartiteRL.gibbs()
   #    Do not burn anything now! Keep it all, and burn later
+  cat("Beginning bipartite sampling\n")
   bipartite.samp <- bipartiteRL.precmp(cmpdata.1to2, nIter.bi, burn.bi, a, b, aBM, bBM, seed, method=bipartite.method, blocksize=Z2blocksize)
 
   # 3. Create precomputed data structures
@@ -78,6 +79,7 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
   pprb.log.ratio <- rep(0, nIter.tri)
 
   # 7. Perform M-H for each iteration
+  cat("Beginning tripartite sampling\n")
   for (i in seq(2, nIter.tri)) {
     # What are the current values of the parameters?
     m.curr <- m.samples[,i-1]
