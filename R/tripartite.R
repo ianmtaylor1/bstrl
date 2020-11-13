@@ -192,11 +192,11 @@ tripartiteRL <- function(df1, df2, df3,
                          types=NULL, breaks=c(0,.25,.5),
                          ...) {
   # Create comparison data using BRL::compareRecords
-  cmpdata.1to2 <- compareRecords(df1, df2, flds, flds1=flds1, flds2=flds2,
+  cmpdata.1to2 <- BRL::compareRecords(df1, df2, flds, flds1=flds1, flds2=flds2,
                                  types=types, breaks=breaks)
-  cmpdata.1to3 <- compareRecords(df1, df3, flds, flds1=flds1, flds2=flds3,
+  cmpdata.1to3 <- BRL::compareRecords(df1, df3, flds, flds1=flds1, flds2=flds3,
                                  types=types, breaks=breaks)
-  cmpdata.2to3 <- compareRecords(df2, df3, flds, flds1=flds2, flds2=flds3,
+  cmpdata.2to3 <- BRL::compareRecords(df2, df3, flds, flds1=flds2, flds2=flds3,
                                  types=types, breaks=breaks)
   # Call function with precompared files
   tripartiteRL.precmp(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, ...)
