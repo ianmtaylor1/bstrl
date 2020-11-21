@@ -42,6 +42,9 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
     # Reset nIter.bi and burn.bi based on the passed in samples
     burn.bi <- 0
     nIter.bi <- ncol(bipartite.samp$Z)
+    # Would normally depend on bipartite sampling function to set seed. Do that
+    # here instead
+    set.seed(seed)
   }
 
 
