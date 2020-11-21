@@ -7,6 +7,7 @@
 #    at end of this function?
 #' @export
 tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=FALSE,
+                                bipartite.samp=NULL,
                                 nIter.bi=1200, burn.bi=round(nIter.bi*.1), bipartite.method="BRL",
                                 nIter.tri=nIter.bi-burn.bi, burn.tri=round(nIter.tri*.1),
                                 pprb.method="ordered", Z2blocksize=NULL,
@@ -32,8 +33,17 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
 
   # 2. Do bipartite RL between df1 and df2 using bipartiteRL.gibbs()
   #    Do not burn anything now! Keep it all, and burn later
-  cat("Beginning bipartite sampling\n")
-  bipartite.samp <- bipartiteRL.precmp(cmpdata.1to2, nIter.bi, burn.bi, a, b, aBM, bBM, seed, method=bipartite.method, blocksize=Z2blocksize)
+  if (is.null(bipartite.samp)) {
+    cat("Beginning bipartite sampling\n")
+    bipartite.samp <- bipartiteRL.precmp(cmpdata.1to2, nIter.bi, burn.bi, a, b, aBM, bBM, seed, method=bipartite.method, blocksize=Z2blocksize)
+  } else {
+    cat("Bipartite samples passed in, using those. Other bipartite sampling",
+        "options will be ignored.\n")
+    # Reset nIter.bi and burn.bi based on the passed in samples
+    burn.bi <- 0
+    nIter.bi <- ncol(bipartite.samp$Z)
+  }
+
 
   # 3. Create precomputed data structures
   comparisons.1to3 <- preproc.cmpdata(cmpdata.1to3)
