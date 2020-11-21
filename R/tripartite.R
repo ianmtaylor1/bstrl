@@ -103,12 +103,18 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
       # link state, then propose that one. There is guaranteed to always be at
       # least one because the current state is valid. All invalid link states
       # have probability zero in the target so we can avoid proposing them.
+      Z.prop.idx <- Z.curr.idx # Default: propose current state
       for (j in sample(ncol(bipartite.samp$Z))) {
+        if (j == Z.curr.idx) { # Skip current state
+          next
+        }
         if (valid.link.state(n1, bipartite.samp$Z[,j], Z2.curr)) {
           Z.prop.idx <- j
           break
         }
       }
+      # If there were literally no possible states, we are now proposing the
+      # current state
     } else {
       # What value should be proposed?
       if (pprb.method == "permuted") {
