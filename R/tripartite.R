@@ -16,15 +16,7 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
   if (! is.element(pprb.method, c("ordered","permuted","resampled"))) {
     stop("pprb.method must be one of 'ordered', 'permuted', or 'resampled'")
   }
-  if (is.element(pprb.method, c("ordered","permuted")) && (nIter.tri != nIter.bi - burn.bi)) {
-    warntext <- paste0("If pprb.method is '", pprb.method, "', ",
-                       "we require nIter.tri == nIter.bi - burn.bi\n",
-                       "Setting parameter values:\n",
-                       "nIter.tri <- ", nIter.bi - burn.bi, "\n",
-                       "burn.tri  <- ", burn.tri)
-    warning(warntext)
-    nIter.tri <- nIter.bi - burn.bi
-  }
+
 
   # 1. Size of files
   n1 <- cmpdata.1to3$n1
@@ -45,6 +37,16 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
     # Would normally depend on bipartite sampling function to set seed. Do that
     # here instead
     set.seed(seed)
+  }
+  # Check that the tripartite iterations matches the pprb method
+  if (is.element(pprb.method, c("ordered","permuted")) && (nIter.tri != nIter.bi - burn.bi)) {
+    warntext <- paste0("If pprb.method is '", pprb.method, "', ",
+                       "we require nIter.tri == nIter.bi - burn.bi\n",
+                       "Setting parameter values:\n",
+                       "nIter.tri <- ", nIter.bi - burn.bi, "\n",
+                       "burn.tri  <- ", burn.tri)
+    warning(warntext)
+    nIter.tri <- nIter.bi - burn.bi
   }
 
 
