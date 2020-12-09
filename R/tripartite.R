@@ -11,6 +11,7 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
                                 nIter.bi=1200, burn.bi=round(nIter.bi*.1), bipartite.method="BRL",
                                 nIter.tri=nIter.bi-burn.bi, burn.tri=round(nIter.tri*.1),
                                 pprb.method="ordered", Z2blocksize=NULL,
+                                three.stage=FALSE,
                                 a=1, b=1, aBM=1, bBM=1, seed=0) {
   # Parameter checking
   if (! is.element(pprb.method, c("ordered","permuted","resampled"))) {
@@ -102,7 +103,8 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
     Z.curr <- Z.samples[,i-1]
     Z2.curr <- Z2.samples[,i-1]
 
-    # 7.1: Propose new Z from PPRB
+    # 7.0 What index of the bipartite samples should be proposed with PPRB? This
+    #     can be used regardless of three stage vs two stage sampling
     if (pprb.method == "resampled") {
       # Go through all bipartite samples until you find one that is a valid
       # link state, then propose that one. There is guaranteed to always be at
@@ -129,44 +131,88 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
         Z.prop.idx <- i
       }
     }
-    Z.prop <- bipartite.samp$Z[,Z.prop.idx]
-    # How different is z.prop from z.curr?
-    Zprop.diffs[i] <- sum(Z.prop != Z.curr)
-    # What is the log of the MH acceptance ratio?
-    log.alpha1 <- (
-      calc.log.lkl(cmpdata.list, m.curr, u.curr, Z.prop, Z2.curr, do.trace=trace)
-      - calc.log.lkl(cmpdata.list, m.curr, u.curr, Z.curr, Z2.curr, do.trace=trace)
-      + calc.log.Z2prior(n1, Z2.curr, Z.prop, aBM, bBM)
-      - calc.log.Z2prior(n1, Z2.curr, Z.curr, aBM, bBM)
-      + ddirichlet.multi(m.curr, bipartite.samp$m.fc.pars[,Z.prop.idx] + a, nDisagLevs, log=TRUE)
-      + ddirichlet.multi(u.curr, bipartite.samp$u.fc.pars[,Z.prop.idx] + b, nDisagLevs, log=TRUE)
-      - ddirichlet.multi(m.curr, bipartite.samp$m.fc.pars[,Z.curr.idx] + a, nDisagLevs, log=TRUE)
-      - ddirichlet.multi(u.curr, bipartite.samp$u.fc.pars[,Z.curr.idx] + b, nDisagLevs, log=TRUE)
-    )
-    # Store the ratio
-    pprb.log.ratio[i] <- log.alpha1
-    # Decide whether to accept new values
-    if (-rexp(1) < log.alpha1) {
-      # accept
-      Z.samples[,i] <- Z.prop
-      Z.curr.idx <- Z.prop.idx
-    } else {
-      # reject
-      Z.samples[,i] <- Z.curr
-      accepted[1,i] <- 0
-      if (log.alpha1 == -Inf) {
-        pprb.impossible[i] <- 1
-      }
-    }
-    # Reset "current" values of parameters
-    Z.curr <- Z.samples[,i]
 
-    # 7.2: Draw new m, u from full conditional distributions
-    tmp <- r_m_u_fc(cmpdata.list, Z.curr, Z2.curr, a, b,
-                    bipartite.samp$m.fc.pars[,Z.curr.idx],
-                    bipartite.samp$u.fc.pars[,Z.curr.idx])
-    m.samples[,i] <- m.curr <- tmp$m
-    u.samples[,i] <- u.curr <- tmp$u
+    # Here we split based on three or two-stage sampling. Three stage, sample
+    # Z1 solo and draw m and u from their fc distributions. Two stage, draw
+    # Z1, m, and u together with PPRB
+    if (three.stage) {
+
+      # 7.1: Propose new Z from PPRB
+      Z.prop <- bipartite.samp$Z[,Z.prop.idx]
+      # How different is z.prop from z.curr?
+      Zprop.diffs[i] <- sum(Z.prop != Z.curr)
+      # What is the log of the MH acceptance ratio?
+      log.alpha1 <- (
+        calc.log.lkl(cmpdata.list, m.curr, u.curr, Z.prop, Z2.curr, do.trace=trace)
+        - calc.log.lkl(cmpdata.list, m.curr, u.curr, Z.curr, Z2.curr, do.trace=trace)
+        + calc.log.Z2prior(n1, Z2.curr, Z.prop, aBM, bBM)
+        - calc.log.Z2prior(n1, Z2.curr, Z.curr, aBM, bBM)
+        + ddirichlet.multi(m.curr, bipartite.samp$m.fc.pars[,Z.prop.idx] + a, nDisagLevs, log=TRUE)
+        + ddirichlet.multi(u.curr, bipartite.samp$u.fc.pars[,Z.prop.idx] + b, nDisagLevs, log=TRUE)
+        - ddirichlet.multi(m.curr, bipartite.samp$m.fc.pars[,Z.curr.idx] + a, nDisagLevs, log=TRUE)
+        - ddirichlet.multi(u.curr, bipartite.samp$u.fc.pars[,Z.curr.idx] + b, nDisagLevs, log=TRUE)
+      )
+      # Store the ratio
+      pprb.log.ratio[i] <- log.alpha1
+      # Decide whether to accept new values
+      if (-rexp(1) < log.alpha1) {
+        # accept
+        Z.samples[,i] <- Z.prop
+        Z.curr.idx <- Z.prop.idx
+      } else {
+        # reject
+        Z.samples[,i] <- Z.curr
+        accepted[1,i] <- 0
+        if (log.alpha1 == -Inf) {
+          pprb.impossible[i] <- 1
+        }
+      }
+      # Reset "current" values of parameters
+      Z.curr <- Z.samples[,i]
+
+      # 7.2: Draw new m, u from full conditional distributions
+      tmp <- r_m_u_fc(cmpdata.list, Z.curr, Z2.curr, a, b,
+                      bipartite.samp$m.fc.pars[,Z.curr.idx],
+                      bipartite.samp$u.fc.pars[,Z.curr.idx])
+      m.samples[,i] <- m.curr <- tmp$m
+      u.samples[,i] <- u.curr <- tmp$u
+
+    } else { ## Two stage sampling: draw Z1, m, and u together from PRPB
+
+      # 7.1/7.2 Draw Z1, m, and u from PPRB
+      Z.prop <- bipartite.samp$Z[,Z.prop.idx]
+      m.prop <- bipartite.samp$m[,Z.prop.idx]
+      u.prop <- bipartite.samp$u[,Z.prop.idx]
+      # How different is z.prop from z.curr?
+      Zprop.diffs[i] <- sum(Z.prop != Z.curr)
+      # Log M-H acceptance ratio
+      log.alpha1 <- (
+        calc.log.lkl(cmpdata.list, m.prop, u.prop, Z.prop, Z2.curr, do.trace=trace)
+        - calc.log.lkl(cmpdata.list, m.curr, u.curr, Z.curr, Z2.curr, do.trace=trace)
+        + calc.log.Z2prior(n1, Z2.curr, Z.prop, aBM, bBM)
+        - calc.log.Z2prior(n1, Z2.curr, Z.curr, aBM, bBM)
+      )
+      # Store the ratio
+      pprb.log.ratio[i] <- log.alpha1
+      # Decide whether to accept new values
+      if (-rexp(1) < log.alpha1) {
+        # accept
+        Z.samples[,i] <- Z.prop
+        m.samples[,i] <- m.prop
+        u.samples[,i] <- u.prop
+        Z.curr.idx <- Z.prop.idx
+      } else {
+        # reject
+        Z.samples[,i] <- Z.curr
+        m.samples[,i] <- m.curr
+        u.samples[,i] <- u.curr
+        accepted[1,i] <- 0
+        if (log.alpha1 == -Inf) {
+          pprb.impossible[i] <- 1
+        }
+      }
+
+    }
 
     # 7.3: Propose new Z2
     tmp <- draw.Z2.informed(cmpdata.list, Z.curr, Z2.curr, m.curr, u.curr,
