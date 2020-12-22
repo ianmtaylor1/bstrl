@@ -211,6 +211,10 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
           pprb.impossible[i] <- 1
         }
       }
+      # Reset "current" values of parameters
+      Z.curr <- Z.samples[,i]
+      m.curr <- m.samples[,i]
+      u.curr <- u.samples[,i]
 
     }
 
