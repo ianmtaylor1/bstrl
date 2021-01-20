@@ -10,6 +10,9 @@ preproc.cmpdata <- function(compared) {
   # functions, and computing them over and over again adds up in terms of comp
   # time.
   attr(compared$comparisons, "totals") <- colSums(compared$comparisons)
+  # Attach a vector of the number of fields that compare equal in each pair
+  equal.indices <- cumsum(compared$nDisagLevs) - compared$nDisagLevs + 1
+  attr(compared$comparisons, "numfieldsequal") <- rowSums(compared$comparisons[,equal.indices])
   # Return the matrix with attached column sums
   return(compared)
 }
