@@ -31,6 +31,49 @@
 #  return(perform.Z2.step(n1, n2, Z2.curr, i, j)$Z2)
 #}
 
+# Draws Z2 from its predictive distribution assuming the empirical prior where
+# the probability two records are linked is (roughly) proportional to the number
+# of fields in which the pair compares equal
+draw.Z2.empiricalprior <- function(cmpdata, Z, aBM, bBM) {
+  # Required file sizes
+  k <- length(cmpdata) + 1 # Number of total files
+  ns <- rep(0, k) # Vector of length k of file sizes
+  for (file in 1:(k-1)) {
+    ns[file] <- cmpdata[[file]]$n1
+  }
+  ns[k] <- cmpdata[[1]]$n2
+  n1 <- ns[1]
+  nlast <- ns[k]
+  nprev <- sum(ns[1:(k-1)]) # Or nprev <- n1 + length(Z)
+  # Number of links comes from beta-binomial
+  nlinks <- rbinom(n=1, size=nlast, prob=rbeta(n=1, aBM, bBM))
+  # Given the number of links, which records in the latest file will be linked?
+  link.from <- sort(sample.int(nlast, nlinks)) # Sort so we always condition in the same order
+  # Initially unlinked Z2
+  Z2 <- nprev + seq_len(nlast)
+  # Store candidate records. Will change as links are created
+  cand <- setdiff(seq_len(nprev), Z[Z < n1 + seq_len(length(Z))])
+  # Loop through the records to link from in order
+  for (recj in link.from) {
+    # Vector to store the weights based on field agreement
+    weights <- rep(0, length(cand))
+    for (file in seq_len(k-1)) {
+      # Find the candidates that are in this file
+      filestart <- sum(ns[seq_len(file-1)]) + 1
+      fileend <- filestart + ns[file] - 1
+      in.file <- (cand >= filestart) & (cand <= fileend)
+      # Pull out the number of matching fields for those candidates
+      pairindices <- (recj - 1) * ns[file] + (cand[in.file] - filestart + 1) # (j-1)*n1 + i
+      weights[in.file] <- attr(cpmdata[[file]], "numfieldsequal")[pairindices]
+    }
+    # Sample the candidate to be matched with this record
+    Z2[recj] <- cand[sample(length(cand), size=1, prob=(weights + 0.01))]
+    cand <- setdiff(cand, Z2[recj]) # Remove linked candidate from candidates
+  }
+  # Finally, Z2 contains the drawn value from the empirical prior
+  return(Z2)
+}
+
 # Draws a proposal for Z2 using a locally-balanced pointwise-informed proposal
 # distribution based on Zanella (2020). The uninformed kernel K is a proposal
 # over add/delete/swap steps which is uniform over pairs of records i,j. This
