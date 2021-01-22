@@ -34,7 +34,7 @@
 # Draws Z2 from its predictive distribution assuming the empirical prior where
 # the probability two records are linked is (roughly) proportional to the number
 # of fields in which the pair compares equal
-draw.Z2.empiricalprior <- function(cmpdata, Z, aBM, bBM) {
+draw.Z2.empiricalprior <- function(cmpdata, Z, aBM, bBM, baseweight=0.01) {
   # Required file sizes
   k <- length(cmpdata) + 1 # Number of total files
   ns <- rep(0, k) # Vector of length k of file sizes
@@ -67,7 +67,7 @@ draw.Z2.empiricalprior <- function(cmpdata, Z, aBM, bBM) {
       weights[in.file] <- attr(cpmdata[[file]], "numfieldsequal")[pairindices]
     }
     # Sample the candidate to be matched with this record
-    Z2[recj] <- cand[sample(length(cand), size=1, prob=(weights + 0.01))]
+    Z2[recj] <- cand[sample(length(cand), size=1, prob=(weights + baseweight))]
     cand <- setdiff(cand, Z2[recj]) # Remove linked candidate from candidates
   }
   # Finally, Z2 contains the drawn value from the empirical prior

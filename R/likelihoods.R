@@ -77,6 +77,76 @@ calc.log.Z2prior <- function(n1, Z2, Z, aBM, bBM) {
   }
 }
 
+# Function to calculate the log prior for Z2 when using the empirical prior
+# where the probability of a pair being linked is proportional to the number
+# of fields which compare equal (plus a base weight). If the value of Z2 is
+# impossible given the value of Z (i.e. due to linking to a non-candidate) this
+# returns -Inf := log(0)
+# In R, negative infinity plus any finite value equals negative infinity, and all
+# finite values compare greater than negative infinity. So this value can be used
+# in acceptance ratio computations without worrying.
+# Parameters:
+#       cmpdata - a list of comparison data objects. There are k-1 total objects
+#             in the list. The first compares file 1 to file k, and so on, until
+#             the last which compares file k-1 to file k. All objects should
+#             therefore have equal n2 values.
+#       Z,Z2 - parameter values. Z2 is the links originating from file k, and Z
+#              is the links originating from files 2 through k-1, concatenated
+#              together (file 1 is excluded because it's unnecessary under the
+#              assumption of no duplicates within files.)
+#       aBM, bBM - prior parameters for beta link prior
+#       baseweight - base amount added to the number of equal fields when
+#              computing link weight
+# Notes:
+#   Assumes length(Z2) <= n1 + length(Z) !!!
+calc.log.Z2prior.empirical <- function(cmpdata, Z, Z2, aBM, bBM, baseweight=0.01) {
+  # Calculates in the order of:
+  # 1. Probability of the observed "linked" indicators (beta-binomial-ish)
+  # 2. Probability of each record's state, in order, conditioned on the
+  #    indicators and the previous records' states. (Links weighted empirically)
+
+  # Required file sizes
+  k <- length(cmpdata) + 1 # Number of total files
+  ns <- rep(0, k) # Vector of length k of file sizes
+  for (file in 1:(k-1)) {
+    ns[file] <- cmpdata[[file]]$n1
+  }
+  ns[k] <- cmpdata[[1]]$n2
+  n1 <- ns[1]
+  nlast <- ns[k]
+  nprev <- sum(ns[1:(k-1)]) # Or nprev <- n1 + length(Z)
+
+  if (valid.link.state(n1, Z, Z2)) {
+    # Probaility of these indicators
+    nlinked <- sum(Z2 <= nprev)
+    logprob <- lbeta(aBM + nlinked, bBM + nlast - nlinked) - lbeta(aBM, bBM)
+    # Add on conditional log probabilities of each observed pair
+    # (conditional probability of unlinked is always 1)
+    which.linked <- which(Z2 <= nprev)
+    # Store candidate records. Will change as links are created
+    cand <- setdiff(seq_len(nprev), Z[Z < n1 + seq_len(length(Z))])
+    for (recj in which.linked) {
+      # Vector to store the weights based on field agreement
+      weights <- rep(0, length(cand))
+      for (file in seq_len(k-1)) {
+        # Find the candidates that are in this file
+        filestart <- sum(ns[seq_len(file-1)]) + 1
+        fileend <- filestart + ns[file] - 1
+        in.file <- (cand >= filestart) & (cand <= fileend)
+        # Pull out the number of matching fields for those candidates
+        pairindices <- (recj - 1) * ns[file] + (cand[in.file] - filestart + 1) # (j-1)*n1 + i
+        weights[in.file] <- attr(cpmdata[[file]], "numfieldsequal")[pairindices]
+      }
+      weights <- (weights + baseweight) / sum(weights + baseweight)
+      logprob <- logprob + log(weights[match(Z2[recj], cand)])
+      cand <- setdiff(cand, Z2[recj])
+    }
+    return(logprob)
+  } else {
+    return(-Inf)
+  }
+}
+
 ################################################################################
 # Helper Functions for Likelihood/Prior functions ##############################
 ################################################################################
