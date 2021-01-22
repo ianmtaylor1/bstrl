@@ -1,5 +1,9 @@
 # This file contains the main functions to do tripartite (or streaming) linkage
 
+################################################################################
+# Gibbs sampling two or three-stage tripartite linkage functions
+################################################################################
+
 # Tripartite RL function built on the BRL package. Arguments the same as
 # BRL.gibbs, but with the additional df3 and flds3 arguments.
 # DESIGN CHOICES
@@ -273,6 +277,129 @@ tripartiteRL <- function(df1, df2, df3,
   tripartiteRL.precmp(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, ...)
 }
 
+
+################################################################################
+# Predictive distribution and Empirical Bayes tripartite linkage functions #####
+################################################################################
+
+# Tripartite RL function built on the BRL package.
+# Differences from gibbs tripartite sampling:
+#   - PPRB method is always resampled.
+#   - Z2blocksize option isn't needed since LB proposals aren't used.
+#   - three.stage option isn't needed b/c gibbs sampling isn't used.
+# TO DO:
+#   - Allow bipartite linkage to use empirical prior also. Requires updating
+#     locally balanced proposals to use empirical prior function
+#' @export
+tripartiteRL.eb.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, link.trace=TRUE,
+                                   bipartite.samp=NULL,
+                                   nIter.bi=1200, burn.bi=round(nIter.bi*.1), bipartite.method="BRL",
+                                   nIter.tri=nIter.bi-burn.bi, burn.tri=round(nIter.tri*.1),
+                                   a=1, b=1, aBM=1, bBM=1, baseweight=0.01, seed=0) {
+
+  # 1. Size of files
+  n1 <- cmpdata.1to3$n1
+  n2 <- cmpdata.2to3$n1
+  n3 <- cmpdata.1to3$n2
+
+  # 2. Do bipartite RL between df1 and df2 using bipartiteRL()
+  #    Do not burn anything now! Keep it all, and burn later
+  if (is.null(bipartite.samp)) {
+    cat("Beginning bipartite sampling\n")
+    bipartite.samp <- bipartiteRL.precmp(cmpdata.1to2, nIter.bi, burn.bi, a, b, aBM, bBM, seed, method=bipartite.method, blocksize=Z2blocksize)
+  } else {
+    cat("Bipartite samples passed in, using those. Other bipartite sampling",
+        "options will be ignored.\n")
+    # Reset nIter.bi and burn.bi based on the passed in samples
+    burn.bi <- 0
+    nIter.bi <- ncol(bipartite.samp$Z)
+    # Would normally depend on bipartite sampling function to set seed. Do that
+    # here instead
+    set.seed(seed)
+  }
+
+  # 3. Create precomputed data structures
+  comparisons.1to3 <- preproc.cmpdata(cmpdata.1to3)
+  comparisons.2to3 <- preproc.cmpdata(cmpdata.2to3)
+  cmpdata.list <- list(comparisons.1to3, comparisons.2to3)
+
+  # 4. Set up empty arrays of the appropriate size that will eventually be returned
+  m.samples  <- matrix(0, nrow=nrow(bipartite.samp$m), ncol=nIter.tri)
+  u.samples  <- matrix(0, nrow=nrow(bipartite.samp$u), ncol=nIter.tri)
+  Z.samples  <- matrix(0, nrow=nrow(bipartite.samp$Z), ncol=nIter.tri)
+  Z2.samples <- matrix(0, nrow=n3,                     ncol=nIter.tri)
+  # Array to hold log of accepted proposals
+  accepted <- rep(0, nIter.tri)
+
+  # 5. Initial sample
+  pprb.index <- sample(nIter.bi - burn.bi, size=nIter.tri, replace=TRUE)
+  m.samples[,1] <- bipartite.samp$m[,pprb.index[1]]
+  u.samples[,1] <- bipartite.samp$u[,pprb.index[1]]
+  Z.samples[,1] <- bipartite.samp$Z[,pprb.index[1]]
+  Z2.samples[,1] <- draw.Z2.empiricalprior(cmpdata.list, Z.samples[,1], aBM, bBM, baseweight)
+
+  # 6. Perform PPRB for nIter.tri iterations
+  for (i in seq(2, nIter.tri)) {
+    # Reset the current values of m, u, Z, and Z2
+    m.curr <- m.samples[,i-1]
+    u.curr <- u.samples[,i-1]
+    Z.curr <- Z.samples[,i-1]
+    Z2.curr <- Z2.samples[,i-1]
+
+    # Draw m, u, and Z from existing samples
+    m.prop <- bipartite.samp$m[,pprb.index[i]]
+    u.prop <- bipartite.samp$u[,pprb.index[i]]
+    Z.prop <- bipartite.samp$Z[,pprb.index[i]]
+    # Draw a Z2 proposal from the prior
+    Z2.prop <- draw.Z2.empiricalprior(cmpdata.list, Z.prop, aBM, bBM, baseweight)
+
+    # Compute the PPRB acceptance ratio as the ratio
+    log.alpha <- (
+      calc.log.lkl(cmpdata.list, m.prop, u.prop, Z.prop, Z2.prop, do.trace=link.trace)
+      - calc.log.lkl(cmpdata.list, m.curr, u.curr, Z.curr, Z2.curr, do.trace=link.trace)
+    )
+
+    # Accept or reject
+    if (log(runif(1)) < log.alpha) {
+      m.samples[,i] <- m.prop
+      u.samples[,i] <- u.prop
+      Z.samples[,i] <- Z.prop
+      Z2.samples[,i] <- Z2.prop
+      accepted[i] <- 1
+    } else {
+      m.samples[,i] <- m.curr
+      u.samples[,i] <- u.curr
+      Z.samples[,i] <- Z.curr
+      Z2.samples[,i] <- Z2.curr
+    }
+  }
+
+  # 7. Burn the initial samples from both the bipartite and tripartite links, and...
+  keptsamples <- setdiff(1:nIter.tri,seq_len(burn.tri))
+  # 8. Return new list comprised of only accepted samples and new matchings, Z2
+  return(list(Z1=Z.samples[,keptsamples,drop=FALSE],
+              Z2=Z2.samples[,keptsamples,drop=FALSE],
+              m=m.samples[,keptsamples,drop=FALSE],
+              u=u.samples[,keptsamples,drop=FALSE],
+              accepted=accepted[keptsamples]))
+
+}
+
+#' @export
+tripartiteRL.eb <- function(df1, df2, df3,
+                         flds=NULL, flds1=NULL, flds2=NULL, flds3=NULL,
+                         types=NULL, breaks=c(0,.25,.5),
+                         ...) {
+  # Create comparison data using BRL::compareRecords
+  cmpdata.1to2 <- BRL::compareRecords(df1, df2, flds, flds1=flds1, flds2=flds2,
+                                      types=types, breaks=breaks)
+  cmpdata.1to3 <- BRL::compareRecords(df1, df3, flds, flds1=flds1, flds2=flds3,
+                                      types=types, breaks=breaks)
+  cmpdata.2to3 <- BRL::compareRecords(df2, df3, flds, flds1=flds2, flds2=flds3,
+                                      types=types, breaks=breaks)
+  # Call function with precompared files
+  tripartiteRL.eb.precmp(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, ...)
+}
 
 ################################################################################
 # Helper Functions for Tripartite Linkage Functions ############################
