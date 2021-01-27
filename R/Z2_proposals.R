@@ -84,7 +84,8 @@ draw.Z2.empiricalprior <- function(cmpdata, Z, aBM, bBM, baseweight=0.01) {
 #         alpha = pi(Z2new, ...)/pi(Z2curr, ...) * mod
 draw.Z2.informed <- function(cmpdata,
                              Z, Z2.curr, m, u, aBM, bBM,
-                             trace=FALSE, blocksize=NULL) {
+                             trace=FALSE, blocksize=NULL,
+                             empiricalprior=FALSE, baseweight=0.01) {
   # Required file sizes
   n1 <- cmpdata[[1]]$n1
   nlast <- cmpdata[[1]]$n2
@@ -102,7 +103,8 @@ draw.Z2.informed <- function(cmpdata,
   iblock <- blocks$iblock
   jblock <- blocks$jblock
   # What is the probability of making any given step?
-  weights <- calc.Z2.stepmatrix(iblock, jblock, cmpdata, m, u, Z, Z2.curr, aBM, bBM, trace=trace)
+  weights <- calc.Z2.stepmatrix(iblock, jblock, cmpdata, m, u, Z, Z2.curr, aBM, bBM, trace=trace,
+                                empiricalprior=empiricalprior, baseweight=baseweight)
   # Sample i and j according to these
   i.draw <- iblock[sample(length(iblock), 1, prob=rowSums(weights))] # i marginally
   j.draw <- jblock[sample(length(jblock), 1, prob=weights[which(iblock == i.draw),])] # j conditionally
@@ -175,7 +177,8 @@ perform.Z2.step <- function(nprev, Z2.curr, i, j) {
 # jvec - vector of indices of records in previous files (candidates) to consider for steps
 # (everything else) - needed to calculate likelihoods for informed step probs
 calc.Z2.stepmatrix <- function(ivec, jvec,
-                               cmpdata, m, u, Z, Z2.curr, aBM, bBM, trace=FALSE) {
+                               cmpdata, m, u, Z, Z2.curr, aBM, bBM,
+                               trace=FALSE, empiricalprior=FALSE, baseweight=0.01) {
   # Required filesizes
   n1 <- cmpdata[[1]]$n1
   nprev <- 0
@@ -192,15 +195,25 @@ calc.Z2.stepmatrix <- function(ivec, jvec,
       # What Z2 would be proposed from modifying the pair (i,j)?
       Z2.prop <- perform.Z2.step(nprev, Z2.curr, i, j)$Z2
       # Calculate posterior for new Z2
-      weights[fromidx, candidx] <- (
-        calc.log.lkl(cmpdata, m, u, Z, Z2.prop, do.trace=trace)
-        + calc.log.Z2prior(n1, Z2.prop, Z, aBM, bBM)
+      weights[fromidx, candidx] <- calc.log.lkl(cmpdata, m, u, Z, Z2.prop, do.trace=trace)
+      weights[fromidx, candidx] <- weights[fromidx, candidx] + (
+        if (empiricalprior) {
+          calc.log.Z2prior.empirical(cmpdata, Z, Z2.prop, aBM, bBM, baseweight)
+        } else {
+          calc.log.Z2prior(n1, Z2.prop, Z, aBM, bBM)
+        }
       )
     }
   }
   # Subtract the log posterior at the current state
-  weights <- weights - (calc.log.lkl(cmpdata, m, u, Z, Z2.curr, do.trace=trace)
-                        + calc.log.Z2prior(n1, Z2.curr, Z, aBM, bBM))
+  weights <- weights - calc.log.lkl(cmpdata, m, u, Z, Z2.curr, do.trace=trace)
+  weights <- weights - (
+    if (empiricalprior) {
+      calc.log.Z2prior.empirical(cmpdata, Z, Z2.curr, aBM, bBM, baseweight)
+    } else {
+      calc.log.Z2prior(n1, Z2.curr, Z, aBM, bBM)
+    }
+  )
   # Bring out of log scale
   weights <- exp(weights)
   # Calculate g(t) for all elements of the matrix
