@@ -135,7 +135,7 @@ calc.log.Z2prior.empirical <- function(cmpdata, Z, Z2, aBM, bBM, baseweight=0.01
         in.file <- (cand >= filestart) & (cand <= fileend)
         # Pull out the number of matching fields for those candidates
         pairindices <- (recj - 1) * ns[file] + (cand[in.file] - filestart + 1) # (j-1)*n1 + i
-        weights[in.file] <- attr(cpmdata[[file]], "numfieldsequal")[pairindices]
+        weights[in.file] <- attr(cmpdata[[file]], "numfieldsequal")[pairindices]
       }
       weights <- (weights + baseweight) / sum(weights + baseweight)
       logprob <- logprob + log(weights[match(Z2[recj], cand)])
