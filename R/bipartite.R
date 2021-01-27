@@ -157,8 +157,8 @@ bipartiteRL.eb.precmp <- function(cmpdata, nIter=1000, burn=round(nIter*.1), a=1
     log.alpha <- (
       calc.log.lkl(list(cmpdata), m.curr, u.curr, c(), Z.prop)
       - calc.log.lkl(list(cmpdata), m.curr, u.curr, c(), Z.curr)
-      + calc.log.Z2prior.empirical(cmpdata, c(), Z.prop, aBM, bBM, baseweight)
-      - calc.log.Z2prior.empirical(cmpdata, c(), Z.curr, aBM, bBM, baseweight)
+      + calc.log.Z2prior.empirical(list(cmpdata), c(), Z.prop, aBM, bBM, baseweight)
+      - calc.log.Z2prior.empirical(list(cmpdata), c(), Z.curr, aBM, bBM, baseweight)
       + log(mhmod)
     )
     if (-rexp(1) < log.alpha) {
