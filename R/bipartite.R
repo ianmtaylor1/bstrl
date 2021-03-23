@@ -104,3 +104,10 @@ bipartiteRL <- function(df1, df2, flds=NULL, flds1=NULL, flds2=NULL, types=NULL,
   # Call the function for precompared records
   bipartiteRL.precmp(myCompData, ...)
 }
+
+
+################################################################################
+# SMCMC implementation
+################################################################################
+
+

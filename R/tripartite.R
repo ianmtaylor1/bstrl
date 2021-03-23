@@ -275,6 +275,83 @@ tripartiteRL <- function(df1, df2, df3,
 
 
 ################################################################################
+# SMCMC implementation
+################################################################################
+
+# "Ensemble" is a list of bipartite samples, like returned from BRL or the
+# bipartite linkage function in this package. But it is treated differently.
+# Here, we use each one as the member of an ensemble for SMCMC. Each one is
+# independently advanced by a Jumping Kernel, followed by nIter.transition steps
+# of a transition kernel, and a new ensemble of the same size is returned
+# Trace is assumed true!
+tripartiteRL.smcmc.precmp <- function(
+  cmpdata.1to2, cmpdata.1to3, cmpdata.2to3,
+  ensemble,
+  nIter.jumping=5,
+  nIter.transition=100,
+  a=1, b=1, aBM=1, bBM=1, seed=0
+) {
+  # Check and process inputs
+  # Size of files
+  n1 <- cmpdata.1to3$n1
+  n2 <- cmpdata.2to3$n1
+  n3 <- cmpdata.1to3$n2
+
+  # Pre-process comparison data and put into list
+  comparisons.1to2 <- preproc.cmpdata(cmpdata.1to2)
+  comparisons.1to3 <- preproc.cmpdata(cmpdata.1to3)
+  comparisons.2to3 <- preproc.cmpdata(cmpdata.2to3)
+  cmpdata.list <- list(list(comparisons.1to2), list(comparisons.1to3, comparisons.2to3))
+  nDisagLevs <- comparisons.1to3$nDisagLevs
+
+  # Set up empty arrays of the appropriate size that will eventually be returned
+  ensemblesize <- ncol(ensemble$Z)
+  m.samples  <- matrix(0, nrow=nrow(ensemble$m), ncol=ensemblesize)
+  u.samples  <- matrix(0, nrow=nrow(ensemble$u), ncol=ensemblesize)
+  Z.samples  <- matrix(0, nrow=nrow(ensemble$Z), ncol=ensemblesize)
+  Z2.samples <- matrix(0, nrow=n3,               ncol=ensemblesize)
+
+  # For each member of input ensemble:
+  for (s in 1:ensemblesize) {
+    # Starting values from ensemble
+    m.curr <- ensemble$m[,s]
+    u.curr <- ensemble$u[,s]
+    Z.curr <- ensemble$Z[,s]
+
+    # Jumping kernel for new Z2
+    Z2.curr <- seq_len(n3) + n1 + n2
+    for (i in 1:nIter.jumping) {
+      # Z2 full conditional
+      # TODO
+    }
+
+    # Transition kernel for all values
+    for (i in 1:nIter.transition) {
+      # m and u full conditional
+      # TODO
+      # Z full conditional
+      # TODO
+      # Z2 full conditional
+      # TODO
+    }
+
+    # Save the current state to the output arrays
+    m.samples[,s] <- m.curr
+    u.samples[,s] <- u.curr
+    Z.samples[,s] <- Z.curr
+    Z2.samples[,s] <- Z2.curr
+  }
+
+  # Return
+  return(list(Z1=Z.samples,
+              Z2=Z2.samples,
+              m=m.samples,
+              u=u.samples))
+}
+
+
+
+################################################################################
 # Helper Functions for Tripartite Linkage Functions ############################
 ################################################################################
 
