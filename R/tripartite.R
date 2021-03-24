@@ -284,6 +284,7 @@ tripartiteRL <- function(df1, df2, df3,
 # independently advanced by a Jumping Kernel, followed by nIter.transition steps
 # of a transition kernel, and a new ensemble of the same size is returned
 # Trace is assumed true!
+#' @export
 tripartiteRL.smcmc.precmp <- function(
   cmpdata.1to2, cmpdata.1to3, cmpdata.2to3,
   ensemble,
@@ -319,20 +320,22 @@ tripartiteRL.smcmc.precmp <- function(
     Z.curr <- ensemble$Z[,s]
 
     # Jumping kernel for new Z2
-    Z2.curr <- seq_len(n3) + n1 + n2
+    Z2.curr <- draw.Z2.global(n1, n2, n3, Z.curr, aBM, bBM)
     for (i in 1:nIter.jumping) {
       # Z2 full conditional
-      # TODO
+      Z2.curr <- r_Z2_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, aBM, bBM)
     }
 
     # Transition kernel for all values
     for (i in 1:nIter.transition) {
       # m and u full conditional
-      # TODO
+      tmp <- r_m_u_fc_smcmc(cmpdata.list, Z.curr, Z2.curr, a, b)
+      m.curr <- tmp$m
+      u.curr <- tmp$u
       # Z full conditional
-      # TODO
+      Z.curr <- r_Z_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, aBM, bBM)
       # Z2 full conditional
-      # TODO
+      Z2.curr <- r_Z2_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, aBM, bBM)
     }
 
     # Save the current state to the output arrays
@@ -348,7 +351,6 @@ tripartiteRL.smcmc.precmp <- function(
               m=m.samples,
               u=u.samples))
 }
-
 
 
 ################################################################################
