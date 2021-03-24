@@ -314,6 +314,8 @@ tripartiteRL.smcmc.precmp <- function(
 
   # For each member of input ensemble:
   for (s in 1:ensemblesize) {
+    cat("Ensemble member ", s, "\n")
+
     # Starting values from ensemble
     m.curr <- ensemble$m[,s]
     u.curr <- ensemble$u[,s]
@@ -323,19 +325,20 @@ tripartiteRL.smcmc.precmp <- function(
     Z2.curr <- draw.Z2.global(n1, n2, n3, Z.curr, aBM, bBM)
     for (i in 1:nIter.jumping) {
       # Z2 full conditional
-      Z2.curr <- r_Z2_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, aBM, bBM)
+      Z2.curr <- r_Z2_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM)
     }
 
     # Transition kernel for all values
     for (i in 1:nIter.transition) {
+      cat("Transition ", i, "\n")
       # m and u full conditional
       tmp <- r_m_u_fc_smcmc(cmpdata.list, Z.curr, Z2.curr, a, b)
       m.curr <- tmp$m
       u.curr <- tmp$u
       # Z full conditional
-      Z.curr <- r_Z_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, aBM, bBM)
+      Z.curr <- r_Z_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM)
       # Z2 full conditional
-      Z2.curr <- r_Z2_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, aBM, bBM)
+      Z2.curr <- r_Z2_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM)
     }
 
     # Save the current state to the output arrays

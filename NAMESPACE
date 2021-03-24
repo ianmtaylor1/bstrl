@@ -2,5 +2,8 @@
 
 export(bipartiteRL)
 export(bipartiteRL.precmp)
+export(precision)
+export(recall)
 export(tripartiteRL)
 export(tripartiteRL.precmp)
+export(tripartiteRL.smcmc.precmp)
