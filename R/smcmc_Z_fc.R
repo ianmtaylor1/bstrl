@@ -62,7 +62,7 @@ r_Z2_fc_smcmc <- function(Z, Z2, m, u, cmpdata, aBM, bBM) {
         rec.i <- i
       }
       Z2.prop <- Z2
-      Z2.prop[j] <- i
+      Z2.prop[j] <- rec.i
       # First, the priors of Z and Z2
       weights[i] <- calc.log.Z2prior(n1, Z2.prop, Z, aBM, bBM)
       # If the prior has nonzero probability, calculate likelihoods

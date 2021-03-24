@@ -322,7 +322,8 @@ tripartiteRL.smcmc.precmp <- function(
     Z.curr <- ensemble$Z[,s]
 
     # Jumping kernel for new Z2
-    Z2.curr <- draw.Z2.global(n1, n2, n3, Z.curr, aBM, bBM)
+    Z2.curr <- n1+n2+seq_len(n3)
+    #Z2.curr <- draw.Z2.global(n1, n2, n3, Z.curr, aBM, bBM)
     for (i in 1:nIter.jumping) {
       # Z2 full conditional
       Z2.curr <- r_Z2_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM)
