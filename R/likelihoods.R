@@ -94,6 +94,17 @@ calc.log.Z2prior <- function(n1, Z2, Z, aBM, bBM) {
 # Notes: assumption is that if a record j is unlinked then Z[j - offset] == j
 valid.link.state <- function(offset, Z, Z2) {
   noncand <- Z[Z < offset + seq_len(length(Z))] # Non-candidates: records with links in later files
-  return(!any(Z2 %in% noncand))
+  Z2linked <- Z2[Z2 < offset + length(Z) + seq_len(length(Z2))]
+  if (any(Z2linked %in% noncand)) {
+    # Invalid state #1: Z2 links to records with links in Z1
+    return(FALSE)
+  } else if (length(unique(noncand)) != length(noncand)) {
+    # Invalid state #2: Z1 contains duplicate links
+    return(FALSE)
+  } else if (length(unique(Z2linked)) != length(Z2linked)) {
+    # Invalid state #3: Z2 contains duplicate links
+    return(FALSE)
+  }
+  return(TRUE)
 }
 
