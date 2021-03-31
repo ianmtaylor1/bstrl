@@ -290,7 +290,8 @@ tripartiteRL.smcmc.precmp <- function(
   ensemble,
   nIter.jumping=5,
   nIter.transition=100,
-  a=1, b=1, aBM=1, bBM=1, seed=0
+  a=1, b=1, aBM=1, bBM=1, seed=0,
+  cores=1
 ) {
   # Check and process inputs
   # Size of files
@@ -307,14 +308,22 @@ tripartiteRL.smcmc.precmp <- function(
 
   # Set up empty arrays of the appropriate size that will eventually be returned
   ensemblesize <- ncol(ensemble$Z)
-  m.samples  <- matrix(0, nrow=nrow(ensemble$m), ncol=ensemblesize)
-  u.samples  <- matrix(0, nrow=nrow(ensemble$u), ncol=ensemblesize)
-  Z.samples  <- matrix(0, nrow=nrow(ensemble$Z), ncol=ensemblesize)
-  Z2.samples <- matrix(0, nrow=n3,               ncol=ensemblesize)
+  m.samples  <- matrix(0, nrow=nrow(ensemble$m),  ncol=ensemblesize)
+  u.samples  <- matrix(0, nrow=nrow(ensemble$u),  ncol=ensemblesize)
+  Z1.samples  <- matrix(0, nrow=nrow(ensemble$Z), ncol=ensemblesize)
+  Z2.samples <- matrix(0, nrow=n3,                ncol=ensemblesize)
+
+  # Create a cluster if necessary and register for parallel execution
+  if (cores > 1) {
+    cl <- parallel::makeCluster(cores)
+    doParallel::registerDoParallel(cl)
+  } else {
+    foreach::registerDoSEQ()
+  }
 
   # For each member of input ensemble:
-  for (s in 1:ensemblesize) {
-    cat("Ensemble member ", s, "\n")
+  `%dopar%` <- foreach::`%dopar%`
+  samplist <- foreach::foreach(s=1:ensemblesize, .inorder=TRUE) %dopar% {
 
     # Starting values from ensemble
     m.curr <- ensemble$m[,s]
@@ -331,7 +340,6 @@ tripartiteRL.smcmc.precmp <- function(
 
     # Transition kernel for all values
     for (i in 1:nIter.transition) {
-      cat("Transition ", i, "\n")
       # m and u full conditional
       tmp <- r_m_u_fc_smcmc(cmpdata.list, Z.curr, Z2.curr, a, b)
       m.curr <- tmp$m
@@ -342,15 +350,24 @@ tripartiteRL.smcmc.precmp <- function(
       Z2.curr <- r_Z2_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM)
     }
 
-    # Save the current state to the output arrays
-    m.samples[,s] <- m.curr
-    u.samples[,s] <- u.curr
-    Z.samples[,s] <- Z.curr
-    Z2.samples[,s] <- Z2.curr
+    # Return a list of the current state
+    list(m=m.curr, u=u.curr, Z1=Z.curr, Z2=Z2.curr)
   }
 
-  # Return
-  return(list(Z1=Z.samples,
+  # Stop execution of cluster
+  if (cores > 1) {
+    parallel::stopCluster(cl)
+  }
+
+  # Pack the results from the default list into arrays
+  for (s in 1:ensemblesize) {
+    m.samples[,s] <- samplist[[s]]$m
+    u.samples[,s] <- samplist[[s]]$u
+    Z1.samples[,s] <- samplist[[s]]$Z1
+    Z2.samples[,s] <- samplist[[s]]$Z2
+  }
+
+  return(list(Z1=Z1.samples,
               Z2=Z2.samples,
               m=m.samples,
               u=u.samples))
