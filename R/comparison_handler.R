@@ -153,3 +153,20 @@ trace <- function(Z2, Z=Z2, steps=0, offset=0) {
   }
   Z2.traced
 }
+
+
+# Function to return a single comparison between any two records in any two files
+# Parameters:
+#   cmpdata = a "triangular" list of lists. first list contains comparisons with file 2
+#             second contains comparisons with file 3 in order, etc.
+#   file1 = index of the first file
+#   file2 = index of the second file. file2 > file1
+#   rec1 = index of the first record. 1 <= rec1 <= n_{file1}
+#   rec2 = index of the second record. 1 <= rec2 <= n_{file2}
+comparison <- function(cmpdata, file1, file2, rec1, rec2) {
+  filepair <- cmpdata[[file2 - 1]][[file1]]
+  nf1 <- filepair$n1
+  nf2 <- filepair$n2
+
+  filepair$comparisons[(rec2 - 1) * nf1 + rec1, ]
+}
