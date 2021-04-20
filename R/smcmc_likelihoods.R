@@ -15,7 +15,7 @@
 # that is passed in, then we return a value of 0 (log of a ratio of 1).
 smcmc.log.lkl.ratio.Z <- function(cmpdata, m, u, Z, Z2, j) {
   n1 <- cmpdata[[1]][[1]]$n1
-  n2 <- cmpdata[[2]][[1]]$n2
+  n2 <- cmpdata[[1]][[1]]$n2
   n3 <- cmpdata[[2]][[2]]$n2
   # If Z[j] is unlinked don't need to do anything
   if (Z[j] == n1 + j) {
@@ -41,7 +41,7 @@ smcmc.log.lkl.ratio.Z <- function(cmpdata, m, u, Z, Z2, j) {
 # that is passed in, then we return a value of 0 (log of a ratio of 1).
 smcmc.log.lkl.ratio.Z2 <- function(cmpdata, m, u, Z, Z2, j) {
   n1 <- cmpdata[[1]][[1]]$n1
-  n2 <- cmpdata[[2]][[1]]$n2
+  n2 <- cmpdata[[1]][[1]]$n2
   n3 <- cmpdata[[2]][[2]]$n2
   # If Z2[j] is unlinked we don't even need to proceed
   if (Z2[j] == n1+n2+j) {
