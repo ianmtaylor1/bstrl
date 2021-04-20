@@ -12,7 +12,7 @@ r_Z_fc_smcmc <- function(Z, Z2, m, u, cmpdata, aBM, bBM) {
   n1 <- cmpdata[[1]][[1]]$n1
 
   for (j in 1:length(Z)) {
-    weights <- rep(0, n1+1)
+    weights <- rep(-Inf, n1+1)
     for (i in seq_len(n1+1)) {
       if (i > n1) {
         rec.i <- n1+j
@@ -51,7 +51,7 @@ r_Z2_fc_smcmc <- function(Z, Z2, m, u, cmpdata, aBM, bBM) {
   n2 <- cmpdata[[1]][[1]]$n2
 
   for (j in 1:length(Z2)) {
-    weights <- rep(0, n1+n2+1)
+    weights <- rep(-Inf, n1+n2+1)
     # All n1 + n2 linked possibilities
     for (i in seq_len(n1+n2+1)) {
       if (i > n1 + n2) {

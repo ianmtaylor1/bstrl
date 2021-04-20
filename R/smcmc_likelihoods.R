@@ -51,7 +51,7 @@ smcmc.log.lkl.ratio.Z2 <- function(cmpdata, m, u, Z, Z2, j) {
     #Where does Z2[j] point?
     if (Z2[j] <= n1) {
       # File 1: only need to add that comparison
-      total <- totals + comparison(cmpdata, 1, 3, Z2[j], j)
+      totals <- totals + comparison(cmpdata, 1, 3, Z2[j], j)
     } else {
       # File 2: need to add that comparison and any follow-on comparisons in file 1
       totals <- totals + comparison(cmpdata, 2, 3, Z2[j] - n1, j)
