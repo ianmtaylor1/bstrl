@@ -171,6 +171,7 @@ comparison <- function(cmpdata, file1, file2, rec1, rec2) {
   nf2 <- filepair$n2
 
   stopifnot(rec1 >= 1, rec1 <= nf1, rec2 >= 1, rec2 <= nf2)
+  stopifnot(nrow(filepair$comparisons) == nf1 * nf2)
 
   filepair$comparisons[(rec2 - 1) * nf1 + rec1, ]
 }
