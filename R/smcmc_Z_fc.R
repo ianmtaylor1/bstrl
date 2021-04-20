@@ -13,7 +13,7 @@ r_Z_fc_smcmc <- function(Z, Z2, m, u, cmpdata, aBM, bBM) {
 
   for (j in 1:length(Z)) {
     weights <- rep(0, n1+1)
-    for (i in seq_len(n1)) {
+    for (i in seq_len(n1+1)) {
       if (i > n1) {
         rec.i <- n1+j
       } else {
@@ -32,13 +32,6 @@ r_Z_fc_smcmc <- function(Z, Z2, m, u, cmpdata, aBM, bBM) {
         weights[i] <- weights[i] + smcmc.log.lkl.ratio.Z(cmpdata, m, u, Z.prop, Z2, j)
       }
     }
-    # The unlinked case
-    Z.prop <- Z
-    Z.prop[j] <- n1 + j
-    weights[n1+1] <- (
-      calc.log.Z2prior(n1, Z2, Z.prop, aBM, bBM)
-      + calc.log.Z2prior(n1, Z.prop, c(), aBM, bBM)
-    )
     # Semi-normalize, just to avoid too much over/underflow in exp
     weights <- weights - max(weights)
     # Select new value, put it directly in Z
@@ -60,7 +53,7 @@ r_Z2_fc_smcmc <- function(Z, Z2, m, u, cmpdata, aBM, bBM) {
   for (j in 1:length(Z2)) {
     weights <- rep(0, n1+n2+1)
     # All n1 + n2 linked possibilities
-    for (i in seq_len(n1+n2)) {
+    for (i in seq_len(n1+n2+1)) {
       if (i > n1 + n2) {
         rec.i <- n1+n2+j
       } else {
@@ -76,10 +69,6 @@ r_Z2_fc_smcmc <- function(Z, Z2, m, u, cmpdata, aBM, bBM) {
         weights[i] <- weights[i] + smcmc.log.lkl.ratio.Z2(cmpdata, m, u, Z, Z2.prop, j)
       }
     }
-    # The unlinked state
-    Z2.prop <- Z2
-    Z2.prop[j] <- n1 + n2 + j
-    weights[n1 + n2 + 1] <- calc.log.Z2prior(n1, Z2.prop, Z, aBM, bBM)
     # Semi-normalize, just to avoid too much over/underflow in exp
     weights <- weights - max(weights)
     # Select new value, put it directly in Z
