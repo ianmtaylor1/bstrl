@@ -164,9 +164,13 @@ trace <- function(Z2, Z=Z2, steps=0, offset=0) {
 #   rec1 = index of the first record. 1 <= rec1 <= n_{file1}
 #   rec2 = index of the second record. 1 <= rec2 <= n_{file2}
 comparison <- function(cmpdata, file1, file2, rec1, rec2) {
+  stopifnot(file1 < file2)
+
   filepair <- cmpdata[[file2 - 1]][[file1]]
   nf1 <- filepair$n1
   nf2 <- filepair$n2
+
+  stopifnot(rec1 >= 1, rec1 <= nf1, rec2 >= 1, rec2 <= nf2)
 
   filepair$comparisons[(rec2 - 1) * nf1 + rec1, ]
 }
