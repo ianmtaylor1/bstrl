@@ -284,6 +284,9 @@ tripartiteRL <- function(df1, df2, df3,
 # independently advanced by a Jumping Kernel, followed by nIter.transition steps
 # of a transition kernel, and a new ensemble of the same size is returned
 # Trace is assumed true!
+# Parameter:
+#   directratio - whether to calculate likelihoods in Z and Z2 full conditionals
+#     directly as ratios (saving computation) or full likelihoods (slower)
 #' @export
 tripartiteRL.smcmc.precmp <- function(
   cmpdata.1to2, cmpdata.1to3, cmpdata.2to3,
@@ -291,7 +294,8 @@ tripartiteRL.smcmc.precmp <- function(
   nIter.jumping=5,
   nIter.transition=100,
   a=1, b=1, aBM=1, bBM=1, seed=0,
-  cores=1
+  cores=1,
+  directratio=TRUE
 ) {
   # Check and process inputs
   # Size of files
@@ -335,7 +339,7 @@ tripartiteRL.smcmc.precmp <- function(
     #Z2.curr <- draw.Z2.global(n1, n2, n3, Z.curr, aBM, bBM)
     for (i in 1:nIter.jumping) {
       # Z2 full conditional
-      Z2.curr <- r_Z2_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM)
+      Z2.curr <- r_Z2_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, directratio)
     }
 
     # Transition kernel for all values
@@ -345,9 +349,9 @@ tripartiteRL.smcmc.precmp <- function(
       m.curr <- tmp$m
       u.curr <- tmp$u
       # Z full conditional
-      Z.curr <- r_Z_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM)
+      Z.curr <- r_Z_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, directratio)
       # Z2 full conditional
-      Z2.curr <- r_Z2_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM)
+      Z2.curr <- r_Z2_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, directratio)
     }
 
     # Return a list of the current state

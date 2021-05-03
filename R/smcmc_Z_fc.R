@@ -6,9 +6,13 @@
 # Z, Z2, m, u - current parameter values
 # cmpdata - a list-of-lists format of comparison data
 # aBM, bBM - Z/Z2 prior parameters.
+# directratio - whether to calculate the likelihood portion of the full conditional
+#     directly using likelihood ratios (i.e. using the unlinked state as reference
+#     value). If FALSE, calculate the full likelihood for each possible state (i.e.
+#     the "slow" evaluation.)
 #
 # Returns: the new value of Z
-r_Z_fc_smcmc <- function(Z, Z2, m, u, cmpdata, aBM, bBM) {
+r_Z_fc_smcmc <- function(Z, Z2, m, u, cmpdata, aBM, bBM, directratio=TRUE) {
   n1 <- cmpdata[[1]][[1]]$n1
 
   for (j in 1:length(Z)) {
@@ -29,7 +33,12 @@ r_Z_fc_smcmc <- function(Z, Z2, m, u, cmpdata, aBM, bBM) {
       # If the prior has nonzero probability, calculate likelihoods
       # Since anything + -Inf == -Inf in R, this just saves time.
       if (weights[i] > -Inf) {
-        weights[i] <- weights[i] + smcmc.log.lkl.ratio.Z(cmpdata, m, u, Z.prop, Z2, j)
+        weights[i] <- weights[i] + if (directratio) {
+          smcmc.log.lkl.ratio.Z(cmpdata, m, u, Z.prop, Z2, j)
+        } else {
+          calc.log.lkl.tracing(cmpdata[[1]], m, u, c(), Z.prop)
+          + calc.log.lkl.tracing(cmpdata[[2]], m, u, Z.prop, Z2)
+        }
       }
     }
     # Semi-normalize, just to avoid too much over/underflow in exp
@@ -44,9 +53,13 @@ r_Z_fc_smcmc <- function(Z, Z2, m, u, cmpdata, aBM, bBM) {
 # Z, Z2, m, u - current parameter values
 # cmpdata - a list-of-lists format of comparison data
 # aBM, bBM - Z/Z2 prior parameters.
+# directratio - whether to calculate the likelihood portion of the full conditional
+#     directly using likelihood ratios (i.e. using the unlinked state as reference
+#     value). If FALSE, calculate the full likelihood for each possible state (i.e.
+#     the "slow" evaluation.)
 #
 # Returns: the new value of Z2
-r_Z2_fc_smcmc <- function(Z, Z2, m, u, cmpdata, aBM, bBM) {
+r_Z2_fc_smcmc <- function(Z, Z2, m, u, cmpdata, aBM, bBM, directratio=TRUE) {
   n1 <- cmpdata[[1]][[1]]$n1
   n2 <- cmpdata[[1]][[1]]$n2
 
@@ -66,7 +79,11 @@ r_Z2_fc_smcmc <- function(Z, Z2, m, u, cmpdata, aBM, bBM) {
       # If the prior has nonzero probability, calculate likelihoods
       # Since anything + -Inf == -Inf in R, this just saves time.
       if (weights[i] > -Inf) {
-        weights[i] <- weights[i] + smcmc.log.lkl.ratio.Z2(cmpdata, m, u, Z, Z2.prop, j)
+        weights[i] <- weights[i] + if (directratio) {
+          smcmc.log.lkl.ratio.Z2(cmpdata, m, u, Z, Z2.prop, j)
+        } else {
+          calc.log.lkl.tracing(cmpdata[[2]], m, u, Z, Z2.prop)
+        }
       }
     }
     # Semi-normalize, just to avoid too much over/underflow in exp
