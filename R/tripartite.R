@@ -321,8 +321,14 @@ tripartiteRL.smcmc.precmp <- function(
   if (cores > 1) {
     cl <- parallel::makeCluster(cores)
     doParallel::registerDoParallel(cl)
+    if (!is.null(seed)) {
+      message("Seed value not set in parallel execution.")
+    }
   } else {
     foreach::registerDoSEQ()
+    if (!is.null(seed)) {
+      set.seed(seed)
+    }
   }
 
   # For each member of input ensemble:
@@ -391,9 +397,14 @@ tripartiteRL.smcmc.precmp <- function(
 tripartiteRL.gibbs.precmp <- function(
   cmpdata.1to2, cmpdata.1to3, cmpdata.2to3,
   nIter=1000,
-  a=1, b=1, aBM=1, bBM=1, seed=0,
+  a=1, b=1, aBM=1, bBM=1, seed=NULL,
   directratio=TRUE
 ) {
+  # Random seed if requested
+  if (!is.null(seed)) {
+    set.seed(seed)
+  }
+
   # Check and process inputs
   # Size of files
   n1 <- cmpdata.1to3$n1
@@ -420,7 +431,7 @@ tripartiteRL.gibbs.precmp <- function(
   Z2.curr <- n1+n2+seq_len(n3)
 
   # Transition kernel for all values
-  for (i in 1:nIter) {
+  for (s in 1:nIter) {
     # m and u full conditional
     tmp <- r_m_u_fc_smcmc(cmpdata.list, Z.curr, Z2.curr, a, b)
     m.curr <- tmp$m
