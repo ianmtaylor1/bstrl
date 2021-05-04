@@ -379,6 +379,66 @@ tripartiteRL.smcmc.precmp <- function(
 
 
 ################################################################################
-# Helper Functions for Tripartite Linkage Functions ############################
+## Full Tripartite Gibbs from nothing
 ################################################################################
 
+
+# Trace is assumed true!
+# Parameter:
+#   directratio - whether to calculate likelihoods in Z and Z2 full conditionals
+#     directly as ratios (saving computation) or full likelihoods (slower)
+#' @export
+tripartiteRL.gibbs.precmp <- function(
+  cmpdata.1to2, cmpdata.1to3, cmpdata.2to3,
+  nIter=1000,
+  a=1, b=1, aBM=1, bBM=1, seed=0,
+  directratio=TRUE
+) {
+  # Check and process inputs
+  # Size of files
+  n1 <- cmpdata.1to3$n1
+  n2 <- cmpdata.2to3$n1
+  n3 <- cmpdata.1to3$n2
+
+  # Pre-process comparison data and put into list
+  comparisons.1to2 <- preproc.cmpdata(cmpdata.1to2)
+  comparisons.1to3 <- preproc.cmpdata(cmpdata.1to3)
+  comparisons.2to3 <- preproc.cmpdata(cmpdata.2to3)
+  cmpdata.list <- list(list(comparisons.1to2), list(comparisons.1to3, comparisons.2to3))
+  nDisagLevs <- comparisons.1to3$nDisagLevs
+
+  # Set up empty arrays of the appropriate size that will eventually be returned
+  m.samples  <- matrix(0, nrow=sum(nDisagLevs),  ncol=nIter)
+  u.samples  <- matrix(0, nrow=sum(nDisagLevs),  ncol=nIter)
+  Z1.samples  <- matrix(0, nrow=n2,               ncol=nIter)
+  Z2.samples <- matrix(0, nrow=n3,                ncol=nIter)
+
+
+  # Starting values for chain
+  m.curr <- u.curr <- NULL # Is the first full conditional sampled.
+  Z.curr <- n1 + seq_len(n2)
+  Z2.curr <- n1+n2+seq_len(n3)
+
+  # Transition kernel for all values
+  for (i in 1:nIter) {
+    # m and u full conditional
+    tmp <- r_m_u_fc_smcmc(cmpdata.list, Z.curr, Z2.curr, a, b)
+    m.curr <- tmp$m
+    u.curr <- tmp$u
+    # Z full conditional
+    Z.curr <- r_Z_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, directratio)
+    # Z2 full conditional
+    Z2.curr <- r_Z2_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, directratio)
+
+    # Save
+    m.samples[,s] <- m.curr
+    u.samples[,s] <- u.curr
+    Z1.samples[,s] <- Z.curr
+    Z2.samples[,s] <- Z2.curr
+  }
+
+  return(list(Z1=Z1.samples,
+              Z2=Z2.samples,
+              m=m.samples,
+              u=u.samples))
+}
