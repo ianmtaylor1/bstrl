@@ -144,7 +144,7 @@ trace <- function(Z2, Z=Z2, steps=0, offset=0) {
   # Vector which will be updated with traces
   Z2.traced <- Z2
   n.prev.records <- length(Z) + offset
-  for (step in 1:steps) {
+  for (step in seq_len(steps)) {
     # At this step, which records are linked to previous records which can be
     # further traced?
     traceable <- (Z2.traced > offset) & (Z2.traced <= n.prev.records)
