@@ -26,8 +26,7 @@ Z_fc_smcmc_weights <- function(j, Z, Z2, m, u, cmpdata, aBM, bBM, directratio=TR
       weights[i] <- weights[i] + if (directratio) {
         smcmc.log.lkl.ratio.Z(cmpdata, m, u, Z.prop, Z2, j)
       } else {
-        calc.log.lkl.tracing(cmpdata[[1]], m, u, c(), Z.prop)
-        + calc.log.lkl.tracing(cmpdata[[2]], m, u, Z.prop, Z2)
+        calc.log.lkl.tracing(cmpdata[[1]], m, u, c(), Z.prop) + calc.log.lkl.tracing(cmpdata[[2]], m, u, Z.prop, Z2)
       }
     }
   }
