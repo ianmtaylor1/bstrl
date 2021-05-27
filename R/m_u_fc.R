@@ -40,17 +40,21 @@ r_m_u_fc <- function(cmpdata, Z, Z2,
 # Next the cmpdata between files 1 and 3, and 2 and 3. This format could be expanded
 # for multiple files.
 # This file also assumes link tracing is occurring
-r_m_u_fc_smcmc <- function(cmpdata, Z, Z2, a, b) {
-  # Tally disagreement counts.
-  tmp <- disag.counts(cmpdata[[1]], c(), Z, do.trace=TRUE)
-  m.pars <- tmp$match
-  u.pars <- tmp$nonmatch
-  tmp <- disag.counts(cmpdata[[2]], Z, Z2, do.trace=TRUE)
-  m.pars <- m.pars + tmp$match
-  u.pars <- u.pars + tmp$nonmatch
-  # DRaw m and u from dirichlet distributions
-  m <- rdirichlet.multi(alpha = m.pars + a, groups = cmpdata[[1]][[1]]$nDisagLevs)
-  u <- rdirichlet.multi(alpha = u.pars + b, groups = cmpdata[[1]][[1]]$nDisagLevs)
+r_m_u_fc_smcmc <- function(cmpdata, Z, Z2, a, b, directratio=FALSE) {
+  if (directratio) {
+    stop("Direct ratio ('fast') computation not implemented for r_m_u_fc_smcmc")
+  } else {
+    # Tally disagreement counts.
+    tmp <- disag.counts(cmpdata[[1]], c(), Z, do.trace=TRUE)
+    m.pars <- tmp$match
+    u.pars <- tmp$nonmatch
+    tmp <- disag.counts(cmpdata[[2]], Z, Z2, do.trace=TRUE)
+    m.pars <- m.pars + tmp$match
+    u.pars <- u.pars + tmp$nonmatch
+    # DRaw m and u from dirichlet distributions
+    m <- rdirichlet.multi(alpha = m.pars + a, groups = cmpdata[[1]][[1]]$nDisagLevs)
+    u <- rdirichlet.multi(alpha = u.pars + b, groups = cmpdata[[1]][[1]]$nDisagLevs)
+  }
   # Return both as a list
   list(m=m, u=u)
 }
@@ -77,7 +81,7 @@ ddirichlet.multi <- function(x, alpha, groups, log=FALSE) {
   ddirichlet <- extraDistr::ddirichlet
   lp <- 0
   prvgrplen <- 0
-  for (g in 1:length(groups)) {
+  for (g in seq_along(groups)) {
     lp <- lp + ddirichlet(x[(prvgrplen+1):(prvgrplen+groups[g])],
                           alpha[(prvgrplen+1):(prvgrplen+groups[g])],
                           log=TRUE)
@@ -105,7 +109,7 @@ rdirichlet.multi <- function(alpha, groups) {
   rdirichlet <- extraDistr::rdirichlet
   prvgrplen <- 0
   x <- rep(0, sum(groups))
-  for (g in 1:length(groups)) {
+  for (g in seq_along(groups)) {
     x[(prvgrplen+1):(prvgrplen+groups[g])] <- rdirichlet(n=1, alpha[(prvgrplen+1):(prvgrplen+groups[g])])
     prvgrplen <- prvgrplen + groups[g]
   }

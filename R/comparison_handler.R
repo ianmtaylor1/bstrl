@@ -32,7 +32,7 @@ disag.counts <- function(cmpdata, Z, Z2, do.trace) {
   # Loop through each previous file and accumulate log likelihood
   tot.match.count <- tot.nonmatch.count <- rep(0, sum(cmpdata[[1]]$nDisagLevs))
   totalprevrecords <- 0
-  for (file in 1:(nfiles-1)) {
+  for (file in seq_len(nfiles-1)) {
     # Matches and non-candidates change depending on whether tracing is done
     if (do.trace) {
       # Which rows in this comparison object correspond to matches?

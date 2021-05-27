@@ -245,7 +245,7 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
     }
   }
   # 8. Burn the initial samples from both the bipartite and tripartite links, and...
-  keptsamples <- setdiff(1:nIter.tri,seq_len(burn.tri))
+  keptsamples <- setdiff(seq_len(nIter.tri), seq_len(burn.tri))
   # 9. Return new list comprised of only accepted samples and new matchings, Z2
   return(list(Z1=Z.samples[,keptsamples,drop=FALSE],
               Z2=Z2.samples[,keptsamples,drop=FALSE],
@@ -333,7 +333,7 @@ tripartiteRL.smcmc.precmp <- function(
 
   # For each member of input ensemble:
   `%dopar%` <- foreach::`%dopar%`
-  samplist <- foreach::foreach(s=1:ensemblesize, .inorder=TRUE) %dopar% {
+  samplist <- foreach::foreach(s=seq_len(ensemblesize), .inorder=TRUE) %dopar% {
 
     # Starting values from ensemble
     m.curr <- ensemble$m[,s]
@@ -343,13 +343,13 @@ tripartiteRL.smcmc.precmp <- function(
     # Jumping kernel for new Z2
     Z2.curr <- n1+n2+seq_len(n3)
     #Z2.curr <- draw.Z2.global(n1, n2, n3, Z.curr, aBM, bBM)
-    for (i in 1:nIter.jumping) {
+    for (i in seq_len(nIter.jumping)) {
       # Z2 full conditional
       Z2.curr <- r_Z2_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, directratio)
     }
 
     # Transition kernel for all values
-    for (i in 1:nIter.transition) {
+    for (i in seq_len(nIter.transition)) {
       # m and u full conditional
       tmp <- r_m_u_fc_smcmc(cmpdata.list, Z.curr, Z2.curr, a, b)
       m.curr <- tmp$m
@@ -370,7 +370,7 @@ tripartiteRL.smcmc.precmp <- function(
   }
 
   # Pack the results from the default list into arrays
-  for (s in 1:ensemblesize) {
+  for (s in seq_len(ensemblesize)) {
     m.samples[,s] <- samplist[[s]]$m
     u.samples[,s] <- samplist[[s]]$u
     Z1.samples[,s] <- samplist[[s]]$Z1
@@ -431,7 +431,7 @@ tripartiteRL.gibbs.precmp <- function(
   Z2.curr <- n1+n2+seq_len(n3)
 
   # Transition kernel for all values
-  for (s in 1:nIter) {
+  for (s in seq_len(nIter)) {
     # m and u full conditional
     tmp <- r_m_u_fc_smcmc(cmpdata.list, Z.curr, Z2.curr, a, b)
     m.curr <- tmp$m
