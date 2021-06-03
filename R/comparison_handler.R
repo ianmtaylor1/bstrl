@@ -5,6 +5,104 @@
 # sampling, and postprocessing of samples for m/u full conditional comparison
 # summaries.
 
+
+# Given a list of comparison data objects and a link state (Z and Z2), returns
+# the total counts of disagreement levels for matches and nonmatches
+# Parameters:
+#   cmpdata - "list of lists" comparison data format
+#       Z,Z2 - parameter values. Z2 is the links originating from file k, and Z
+#              is the links originating from files 2 through k-1, concatenated
+#              together (file 1 is excluded because it's unnecessary under the
+#              assumption of no duplicates within files.)
+# Returns:
+#   A list with two components, match and nonmatch, which are the total counts
+#   of disagreement levels for matches and nonmatches respectfully. Each vector
+#   is the length of the number of columns of a comparison matrix, which is the
+#   total number of disagreement levels of all fields that are compared.
+disag.counts.smcmc.fast <- function(cmpdata, Z, Z2) {
+  # How many files are we dealing with?
+  nfiles <- length(cmpdata) + 1
+  # Size of files: file 1 is special, and let's keep the rest in a vector
+  n1 <- cmpdata[[1]][[1]]$n1
+  ns <- rep(0, nfiles)
+  for (i in seq_len(nfiles - 1)) {
+    ns[i] <- cmpdata[[nfiles - 1]][[i]]$n1
+  }
+  ns[nfiles] <- cmpdata[[nfiles - 1]][[nfiles - 1]]$n2
+  # Total disagreement levels
+  nlevels <- sum(cmpdata[[1]][[1]]$nDisagLevs)
+
+  # Concatenate Z and Z2 into a single vector we can repeatedly trace
+  Z.all <- c(Z, Z2)
+
+  # Initial match counts:
+  match.count <- rep(0, nlevels)
+  nonmatch.count <- rep(0, nlevels)
+
+  # Match counts: one pair at a time, tracing
+
+  # The initial "trace" is just from no links to the base form of Z/Z2
+  Z.prev <- n1 + seq_len(sum(ns) - n1)
+  Z.traced <- Z.all
+  # Take the maximum number of steps
+  for (steps in seq_len(nfiles - 1)) {
+    # Which links did tracing change?
+    different <- which(Z.traced != Z.prev)
+
+    if (length(different) == 0) break # If nothing has changed we don't have to keep looping
+
+    # Convert each end of the link to file,idx pair format
+    fileidx.from <- infile(n1 + different, ns)
+    fileidx.to <- infile(Z.traced[different], ns)
+
+    # For each new link, tally its disagreement level counts
+    for (i in seq_len(different)) {
+      match.count <- match.count +
+        comparison(cmpdata, fileidx.to$file[i], fileidx.from$file[i],
+                   fileidx.to$idx[i], fileidx.from$idx[i])
+    }
+
+    # Trace 1 more step
+    Z.prev <- Z.traced
+    Z.traced <- trace(Z.traced, Z.all, steps=1)
+  }
+
+  # Nonmatch counts: totals minus match counts
+  for (f1 in seq_len(nfiles - 1)) {
+    for (f2 in seq_len(f1)) {
+      nonmatch.count <- nonmatch.count + attr(cmpdata[[f1]][[f2]]$comparisons, "totals")
+    }
+  }
+  nonmatch.count <- nonmatch.count - match.count
+
+  # return both
+  return(list(match=match.count, nonmatch=nonmatch.count))
+}
+
+# Given a vector of record indices (globalized) and a vector of file sizes,
+# tell which file each record belongs to
+# Returns a list of two vectors: file and idx, each the same length as records.
+# file has indices of the file a record belongs to (1 to length(ns))
+# idx has the corresponding index within the file
+# e.g.
+# records = c(5, 12, 27)
+# ns = c(6, 3, 10, 10)
+# Return:
+#   list(file=c(1, 3, 4), idx=c(5, 3, 8))
+infile <- function(records, ns) {
+  # Thresholds of the cumulative number of records through file k
+  thresh <- cumsum(ns)
+
+  # Find the file number of each record
+  fileno <- findInterval(records, thresh, left.open=T) + 1
+
+  # Find the index within each file
+  idxno <- records - (thresh - ns)[fileno]
+
+  return(list(file=fileno, idx=idxno))
+}
+
+
 # Given a list of comparison data objects and a link state (Z and Z2), returns
 # the total counts of disagreement levels for matches and nonmatches
 # Parameters:

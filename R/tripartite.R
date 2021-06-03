@@ -295,7 +295,8 @@ tripartiteRL.smcmc.precmp <- function(
   nIter.transition=100,
   a=1, b=1, aBM=1, bBM=1, seed=0,
   cores=1,
-  directratio=TRUE
+  directratio=TRUE,
+  fastmu=directratio
 ) {
   # Check and process inputs
   # Size of files
@@ -351,7 +352,7 @@ tripartiteRL.smcmc.precmp <- function(
     # Transition kernel for all values
     for (i in seq_len(nIter.transition)) {
       # m and u full conditional
-      tmp <- r_m_u_fc_smcmc(cmpdata.list, Z.curr, Z2.curr, a, b)
+      tmp <- r_m_u_fc_smcmc(cmpdata.list, Z.curr, Z2.curr, a, b, fastcomp=fastmu)
       m.curr <- tmp$m
       u.curr <- tmp$u
       # Z full conditional
@@ -398,7 +399,8 @@ tripartiteRL.gibbs.precmp <- function(
   cmpdata.1to2, cmpdata.1to3, cmpdata.2to3,
   nIter=1000,
   a=1, b=1, aBM=1, bBM=1, seed=NULL,
-  directratio=TRUE
+  directratio=TRUE,
+  fastmu=directratio
 ) {
   # Random seed if requested
   if (!is.null(seed)) {
@@ -433,7 +435,7 @@ tripartiteRL.gibbs.precmp <- function(
   # Transition kernel for all values
   for (s in seq_len(nIter)) {
     # m and u full conditional
-    tmp <- r_m_u_fc_smcmc(cmpdata.list, Z.curr, Z2.curr, a, b)
+    tmp <- r_m_u_fc_smcmc(cmpdata.list, Z.curr, Z2.curr, a, b, fastcomp=fastmu)
     m.curr <- tmp$m
     u.curr <- tmp$u
     # Z full conditional
