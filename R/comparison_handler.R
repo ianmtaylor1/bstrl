@@ -56,7 +56,7 @@ disag.counts.smcmc.fast <- function(cmpdata, Z, Z2) {
     fileidx.to <- infile(Z.traced[different], ns)
 
     # For each new link, tally its disagreement level counts
-    for (i in seq_len(different)) {
+    for (i in seq_along(different)) {
       match.count <- match.count +
         comparison(cmpdata, fileidx.to$file[i], fileidx.from$file[i],
                    fileidx.to$idx[i], fileidx.from$idx[i])
@@ -64,7 +64,7 @@ disag.counts.smcmc.fast <- function(cmpdata, Z, Z2) {
 
     # Trace 1 more step
     Z.prev <- Z.traced
-    Z.traced <- trace(Z.traced, Z.all, steps=1)
+    Z.traced <- trace(Z.traced, Z.all, steps=1, offset=n1)
   }
 
   # Nonmatch counts: totals minus match counts
