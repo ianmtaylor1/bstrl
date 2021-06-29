@@ -35,3 +35,35 @@ calc.log.Z2prior <- function(n1, Z2, Z, aBM, bBM) {
   }
 }
 
+
+calc.log.Z2prior.flat <- function(n1, Z2, Z) {
+  if (check.no.duplicates(Z2)) {
+    return(0)
+  } else {
+    return(-Inf)
+  }
+}
+
+
+calc.log.Z2prior.noinvalid <- function(n1, Z2, Z, aBM, bBM) {
+  # Minimal validity check: only check for duplicates within Z2, not compatibility
+  # with Z1 and Z2 together
+  if (check.no.duplicates(Z2)) {
+    nprev <- length(Z) # Total records in previous files except file 1
+    nlast <- length(Z2) # Records in the most recent file
+    # Candidates in this implementation are all previous records: no non-candidates
+    # are excluded, no invalid states are given zero probability in the prior
+    ncand <- n1 + nprev
+    # How many links are there currently between file 3 and the candidate set?
+    nlinked <- sum(Z2 <= n1 + nprev)
+    # Work in log scale: replacing log(x!) with lgamma(x+1) and log(beta(a,b))
+    # with lbeta(a,b)
+    logprior <- (
+      (lgamma(ncand - nlinked + 1) - lgamma(ncand + 1))
+      + (lbeta(aBM + nlinked, bBM + nlast - nlinked) - lbeta(aBM, bBM))
+    )
+    return(logprior)
+  } else {
+    return(-Inf)
+  }
+}

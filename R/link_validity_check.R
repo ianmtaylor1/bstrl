@@ -19,13 +19,23 @@ valid.link.state <- function(offset, Z, Z2) {
   if (any(Z2linked %in% noncand)) {
     # Invalid state #1: Z2 links to records with links in Z1
     return(FALSE)
-  } else if (length(unique(noncand)) != length(noncand)) {
+  } else if (!check.no.duplicates(noncand)) {
     # Invalid state #2: Z1 contains duplicate links
     return(FALSE)
-  } else if (length(unique(Z2linked)) != length(Z2linked)) {
+  } else if (!check.no.duplicates(Z2linked)) {
     # Invalid state #3: Z2 contains duplicate links
     return(FALSE)
   }
   return(TRUE)
 }
 
+# Check that a vetor Z contains no duplicate values. This is a minimum validity
+# check, that checks whether a link parameter vector Z (Z1, Z2, etc) doesn't
+# have any duplicates in itself.
+check.no.duplicates <- function(Z) {
+  if (length(unique(Z)) != length(Z)) {
+    return(FALSE)
+  } else {
+    return(TRUE)
+  }
+}
