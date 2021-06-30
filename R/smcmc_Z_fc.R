@@ -12,8 +12,11 @@
 #     the "slow" evaluation.)
 #
 # Returns: the new value of Z
-r_Z_fc_smcmc <- function(Z, Z2, m, u, cmpdata, aBM, bBM, directratio=TRUE) {
+r_Z_fc_smcmc <- function(Z, Z2, m, u, cmpdata, aBM, bBM, directratio=TRUE, Z2prior=c("default", "flat", "noinv")) {
   n1 <- cmpdata[[1]][[1]]$n1
+
+  # Parse Z2 prior choice
+  Z2prior <- match.arg(Z2prior)
 
   for (j in seq_along(Z)) {
     weights <- rep(-Inf, n1+1)
@@ -27,8 +30,19 @@ r_Z_fc_smcmc <- function(Z, Z2, m, u, cmpdata, aBM, bBM, directratio=TRUE) {
       Z.prop[j] <- rec.i
       # First, the priors of Z and Z2
       weights[i] <- (
-        calc.log.Z2prior(n1, Z2, Z.prop, aBM, bBM)
-        + calc.log.Z2prior(n1, Z.prop, c(), aBM, bBM)
+        calc.log.Z2prior(n1, Z.prop, c(), aBM, bBM) +  ## Z1 - same as before
+        if (!valid.link.state(n1, Z.prop, Z2)) {       ## Z2 - multiple possibilities
+          # Need to check for validity here because now not all priors do it
+          -Inf
+        } else if (Z2prior == "default") {
+          calc.log.Z2prior(n1, Z2, Z.prop, aBM, bBM)
+        } else if (Z2prior == "flat") {
+          calc.log.Z2prior.flat(n1, Z2, Z.prop)
+        } else if (Z2prior == "noinv") {
+          calc.log.Z2prior.noinvalid(n1, Z2, Z.prop, aBM, bBM)
+        } else {
+          stop("Invalid Z2prior value. Should not be here, match.arg() must not have worked.")
+        }
       )
       # If the prior has nonzero probability, calculate likelihoods
       # Since anything + -Inf == -Inf in R, this just saves time.
@@ -58,9 +72,12 @@ r_Z_fc_smcmc <- function(Z, Z2, m, u, cmpdata, aBM, bBM, directratio=TRUE) {
 #     the "slow" evaluation.)
 #
 # Returns: the new value of Z2
-r_Z2_fc_smcmc <- function(Z, Z2, m, u, cmpdata, aBM, bBM, directratio=TRUE) {
+r_Z2_fc_smcmc <- function(Z, Z2, m, u, cmpdata, aBM, bBM, directratio=TRUE, Z2prior=c("default", "flat", "noinv")) {
   n1 <- cmpdata[[1]][[1]]$n1
   n2 <- cmpdata[[1]][[1]]$n2
+
+  # Parse Z2 prior choice
+  Z2prior <- match.arg(Z2prior)
 
   for (j in seq_along(Z2)) {
     weights <- rep(-Inf, n1+n2+1)
@@ -74,7 +91,18 @@ r_Z2_fc_smcmc <- function(Z, Z2, m, u, cmpdata, aBM, bBM, directratio=TRUE) {
       Z2.prop <- Z2
       Z2.prop[j] <- rec.i
       # First, the priors of Z and Z2
-      weights[i] <- calc.log.Z2prior(n1, Z2.prop, Z, aBM, bBM)
+      weights[i] <- if (!valid.link.state(n1, Z, Z2.prop)) {
+        # Need to do validity checking here since not all priors do it anymore
+        -Inf
+      } else if (Z2prior == "default") {
+        calc.log.Z2prior(n1, Z2.prop, Z, aBM, bBM)
+      } else if (Z2prior == "flat") {
+        calc.log.Z2prior.flat(n1, Z2.prop, Z)
+      } else if (Z2prior == "noinv") {
+        calc.log.Z2prior.noinvalid(n1, Z2.prop, Z, aBM, bBM)
+      } else {
+        stop("Invalid Z2prior value. Should not be here, match.arg() must not have worked.")
+      }
       # If the prior has nonzero probability, calculate likelihoods
       # Since anything + -Inf == -Inf in R, this just saves time.
       if (weights[i] > -Inf) {
