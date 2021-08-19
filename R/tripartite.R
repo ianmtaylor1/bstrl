@@ -297,7 +297,9 @@ tripartiteRL.smcmc.precmp <- function(
   cores=1,
   directratio=TRUE,
   fastmu=directratio,
-  Z2prior=c("default", "flat", "noinv")
+  Z2prior=c("default", "flat", "noinv"),
+  Zproposals=c("Sadinle", "Zanella"),
+  blocksize=NULL
 ) {
   # Check and process inputs
   # Size of files
@@ -307,6 +309,9 @@ tripartiteRL.smcmc.precmp <- function(
 
   # Process Z2prior parameter
   Z2prior <- match.arg(Z2prior)
+
+  # Process Z proposal parameter
+  Zproposals <- match.arg(Zproposals)
 
   # Pre-process comparison data and put into list
   comparisons.1to2 <- preproc.cmpdata(cmpdata.1to2)
@@ -350,7 +355,13 @@ tripartiteRL.smcmc.precmp <- function(
     #Z2.curr <- draw.Z2.global(n1, n2, n3, Z.curr, aBM, bBM)
     for (i in seq_len(nIter.jumping)) {
       # Z2 full conditional
-      Z2.curr <- r_Z2_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, directratio, Z2prior)
+      if (Z2proposals == "Sadinle") {
+        Z2.curr <- r_Z2_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, directratio, Z2prior)
+      } else if (Z2proposals == "Zanella") {
+        Z2.curr <- r_Z2_fc_smcmc_zanella(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, Z2prior, blocksize)
+      } else {
+        stop("Invalid Z2 proposal name")
+      }
     }
 
     # Transition kernel for all values
@@ -362,7 +373,13 @@ tripartiteRL.smcmc.precmp <- function(
       # Z full conditional
       Z.curr <- r_Z_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, directratio, Z2prior)
       # Z2 full conditional
-      Z2.curr <- r_Z2_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, directratio, Z2prior)
+      if (Z2proposals == "Sadinle") {
+        Z2.curr <- r_Z2_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, directratio, Z2prior)
+      } else if (Z2proposals == "Zanella") {
+        Z2.curr <- r_Z2_fc_smcmc_zanella(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, Z2prior, blocksize)
+      } else {
+        stop("Invalid Z2 proposal name")
+      }
     }
 
     # Return a list of the current state
@@ -405,7 +422,9 @@ tripartiteRL.gibbs.precmp <- function(
   a=1, b=1, aBM=1, bBM=1, seed=NULL,
   directratio=TRUE,
   fastmu=directratio,
-  Z2prior=c("default", "flat", "noinv")
+  Z2prior=c("default", "flat", "noinv"),
+  Zproposals=c("Sadinle", "Zanella"),
+  blocksize=NULL
 ) {
   # Random seed if requested
   if (!is.null(seed)) {
@@ -414,6 +433,9 @@ tripartiteRL.gibbs.precmp <- function(
 
   # Process Z2prior parameter
   Z2prior <- match.arg(Z2prior)
+
+  # Process Z proposal parameter
+  Zproposals <- match.arg(Zproposals)
 
   # Check and process inputs
   # Size of files
@@ -449,7 +471,13 @@ tripartiteRL.gibbs.precmp <- function(
     # Z full conditional
     Z.curr <- r_Z_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, directratio, Z2prior)
     # Z2 full conditional
-    Z2.curr <- r_Z2_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, directratio, Z2prior)
+    if (Z2proposals == "Sadinle") {
+      Z2.curr <- r_Z2_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, directratio, Z2prior)
+    } else if (Z2proposals == "Zanella") {
+      Z2.curr <- r_Z2_fc_smcmc_zanella(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, Z2prior, blocksize)
+    } else {
+      stop("Invalid Z2 proposal name")
+    }
 
     # Save
     m.samples[,s] <- m.curr
