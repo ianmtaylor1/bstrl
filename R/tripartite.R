@@ -355,9 +355,9 @@ tripartiteRL.smcmc.precmp <- function(
     #Z2.curr <- draw.Z2.global(n1, n2, n3, Z.curr, aBM, bBM)
     for (i in seq_len(nIter.jumping)) {
       # Z2 full conditional
-      if (Z2proposals == "Sadinle") {
+      if (Zproposals == "Sadinle") {
         Z2.curr <- r_Z2_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, directratio, Z2prior)
-      } else if (Z2proposals == "Zanella") {
+      } else if (Zproposals == "Zanella") {
         Z2.curr <- r_Z2_fc_smcmc_zanella(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, Z2prior, blocksize)
       } else {
         stop("Invalid Z2 proposal name")
@@ -371,11 +371,17 @@ tripartiteRL.smcmc.precmp <- function(
       m.curr <- tmp$m
       u.curr <- tmp$u
       # Z full conditional
-      Z.curr <- r_Z_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, directratio, Z2prior)
+      if (Zproposals == "Sadinle") {
+        Z.curr <- r_Z_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, directratio, Z2prior)
+      } else if (Zproposals == "Zanella") {
+        Z.curr <- r_Z_fc_smcmc_zanella(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, Z2prior, blocksize)
+      } else {
+        stop("Invalid Z proposal name")
+      }
       # Z2 full conditional
-      if (Z2proposals == "Sadinle") {
+      if (Zproposals == "Sadinle") {
         Z2.curr <- r_Z2_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, directratio, Z2prior)
-      } else if (Z2proposals == "Zanella") {
+      } else if (Zproposals == "Zanella") {
         Z2.curr <- r_Z2_fc_smcmc_zanella(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, Z2prior, blocksize)
       } else {
         stop("Invalid Z2 proposal name")
@@ -469,11 +475,17 @@ tripartiteRL.gibbs.precmp <- function(
     m.curr <- tmp$m
     u.curr <- tmp$u
     # Z full conditional
-    Z.curr <- r_Z_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, directratio, Z2prior)
+    if (Zproposals == "Sadinle") {
+      Z.curr <- r_Z_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, directratio, Z2prior)
+    } else if (Zproposals == "Zanella") {
+      Z.curr <- r_Z_fc_smcmc_zanella(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, Z2prior, blocksize)
+    } else {
+      stop("Invalid Z proposal name")
+    }
     # Z2 full conditional
-    if (Z2proposals == "Sadinle") {
+    if (Zproposals == "Sadinle") {
       Z2.curr <- r_Z2_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, directratio, Z2prior)
-    } else if (Z2proposals == "Zanella") {
+    } else if (Zproposals == "Zanella") {
       Z2.curr <- r_Z2_fc_smcmc_zanella(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, Z2prior, blocksize)
     } else {
       stop("Invalid Z2 proposal name")

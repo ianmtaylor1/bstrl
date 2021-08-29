@@ -138,8 +138,81 @@ r_Z_fc_smcmc_zanella <- function(Z, Z2, m, u, cmpdata, aBM, bBM, Z2prior=c("defa
   # Parse Z2 prior choice
   Z2prior <- match.arg(Z2prior)
 
+  # File sizes
+  n1 <- cmpdata[[1]][[1]]$n1
+  n2 <- cmpdata[[1]][[1]]$n2
+  n3 <- cmpdata[[2]][[2]]$n2
+
+  Z.curr <- Z # To differentiate from the proposed value
+
+  # Create blocks of possibilities for movesShrink possibilities down to blocksize
+  blocks <- create.blocks(blocksize, n1, seq_len(n1), Z.curr)
+  while ((length(blocks$iblock) == 0) || (length(blocks$jblock) == 0)) {
+    blocks <- create.blocks(blocksize, n1, seq_len(n1), Z.curr)
+  }
+  iblock <- blocks$iblock
+  jblock <- blocks$jblock
+
+  # What is the probability of making any given step?
+  weights <- calc.Z.stepmatrix.smcmc(iblock, jblock, cmpdata, m, u, Z.curr, Z2, aBM, bBM, Z2prior)
+
+  # Sample i and j according to these
+  i.draw <- iblock[sample(length(iblock), 1, prob=rowSums(weights))] # i marginally
+  j.draw <- jblock[sample(length(jblock), 1, prob=weights[which(iblock == i.draw),])] # j conditionally
+  tmp <- perform.Z2.step(n1, Z.curr, i.draw, j.draw) # This references a function in Z2_proposals.R
+  Z.prop <- tmp$Z2
+  reverse.move <- tmp$rev
+
+  # What are the probabilities of backwards steps
+  rev.weights <- calc.Z.stepmatrix.smcmc(iblock, jblock, cmpdata, m, u, Z.prop, Z2, aBM, bBM, Z2prior)
+
+  # Return the proposed value and MH acceptance ratio component
+  mhmod <- rev.weights[which(iblock == reverse.move[1]), which(jblock == reverse.move[2])] / weights[which(iblock == i.draw),which(jblock == j.draw)]
+
+  # Metropolis-hastings step and return
+  # Likelihood component of alpha
+  log.alpha <- (
+    calc.log.lkl.tracing(cmpdata[[2]], m, u, Z.prop, Z2) +
+      calc.log.lkl.tracing(cmpdata[[1]], m, u, c(), Z.prop) -
+      calc.log.lkl.tracing(cmpdata[[2]], m, u, Z.curr, Z2) -
+      calc.log.lkl.tracing(cmpdata[[1]], m, u, c(), Z.curr)
+  )
+  # Z2 prior component
+  if (Z2prior == "default") {
+    log.alpha <- log.alpha +
+      calc.log.Z2prior(n1, Z2, Z.prop, aBM, bBM) -
+      calc.log.Z2prior(n1, Z2, Z.curr, aBM, bBM)
+  } else if (Z2prior == "flat") {
+    log.alpha <- log.alpha +
+      calc.log.Z2prior.flat(n1, Z2, Z.prop) -
+      calc.log.Z2prior.flat(n1, Z2, Z.curr)
+  } else if (Z2prior == "noinv") {
+    log.alpha <- log.alpha +
+      calc.log.Z2prior.noinvalid(n1, Z2, Z.prop, aBM, bBM) -
+      calc.log.Z2prior.noinvalid(n1, Z2, Z.curr, aBM, bBM)
+  } else {
+    stop("Invalid Z2prior value. Should not be here, match.arg() must not have worked.")
+  }
+  # Z prior component
+  log.alpha <- log.alpha + (
+    calc.log.Z2prior(n1, Z.prop, c(), aBM, bBM) -
+      calc.log.Z2prior(n1, Z.curr, c(), aBM, bBM)
+  )
+  # MH adjustment component
+  log.alpha <- log.alpha + log(mhmod)
+
+  if (log(runif(1)) < log.alpha) {
+    return(Z.prop)
+  } else {
+    return(Z.curr)
+  }
 }
 
+
+# Propose, then accept or reject, a value of Z2 using a locally balanced proposal
+# of the form of Zanella (2020). Takes the same arguments as the Sadinle (2017)
+# full conditional functions except that it has no option to do directratio
+# likelihood computation. Instead it takes a blocksize parameter.
 r_Z2_fc_smcmc_zanella <- function(Z, Z2, m, u, cmpdata, aBM, bBM, Z2prior=c("default", "flat", "noinv"), blocksize=NULL) {
   # Parse Z2 prior choice
   Z2prior <- match.arg(Z2prior)
@@ -165,7 +238,7 @@ r_Z2_fc_smcmc_zanella <- function(Z, Z2, m, u, cmpdata, aBM, bBM, Z2prior=c("def
   # Sample i and j according to these
   i.draw <- iblock[sample(length(iblock), 1, prob=rowSums(weights))] # i marginally
   j.draw <- jblock[sample(length(jblock), 1, prob=weights[which(iblock == i.draw),])] # j conditionally
-  tmp <- perform.Z2.step(nprev, Z2.curr, i.draw, j.draw) # This references
+  tmp <- perform.Z2.step(n1+n2, Z2.curr, i.draw, j.draw) # This references a function in Z2_proposals.R
   Z2.prop <- tmp$Z2
   reverse.move <- tmp$rev
 
@@ -177,28 +250,25 @@ r_Z2_fc_smcmc_zanella <- function(Z, Z2, m, u, cmpdata, aBM, bBM, Z2prior=c("def
 
   # Metropolis-hastings step and return
   log.alpha <- (
-    calc.log.lkl.tracing(cmpdata[[2]], m, u, Z, Z2.prop)
-    - calc.log.lkl.tracing(cmpdata[[2]], m, u, Z, Z2.curr)
-    + if (Z2prior == "default") {
-        calc.log.Z2prior(n1, Z2.prop, Z, aBM, bBM)
-      } else if (Z2prior == "flat") {
-        calc.log.Z2prior.flat(n1, Z2.prop, Z)
-      } else if (Z2prior == "noinv") {
-        calc.log.Z2prior.noinvalid(n1, Z2.prop, Z, aBM, bBM)
-      } else {
-        stop("Invalid Z2prior value. Should not be here, match.arg() must not have worked.")
-      }
-    - if (Z2prior == "default") {
-        calc.log.Z2prior(n1, Z2.curr, Z, aBM, bBM)
-      } else if (Z2prior == "flat") {
-        calc.log.Z2prior.flat(n1, Z2.curr, Z)
-      } else if (Z2prior == "noinv") {
-        calc.log.Z2prior.noinvalid(n1, Z2.curr, Z, aBM, bBM)
-      } else {
-        stop("Invalid Z2prior value. Should not be here, match.arg() must not have worked.")
-      }
-    + log(mhmod)
+    calc.log.lkl.tracing(cmpdata[[2]], m, u, Z, Z2.prop) -
+    calc.log.lkl.tracing(cmpdata[[2]], m, u, Z, Z2.curr)
   )
+  if (Z2prior == "default") {
+    log.alpha <- log.alpha +
+      calc.log.Z2prior(n1, Z2.prop, Z, aBM, bBM) -
+      calc.log.Z2prior(n1, Z2.curr, Z, aBM, bBM)
+  } else if (Z2prior == "flat") {
+    log.alpha <- log.alpha +
+      calc.log.Z2prior.flat(n1, Z2.prop, Z) -
+      calc.log.Z2prior.flat(n1, Z2.curr, Z)
+  } else if (Z2prior == "noinv") {
+    log.alpha <- log.alpha +
+      calc.log.Z2prior.noinvalid(n1, Z2.prop, Z, aBM, bBM) -
+      calc.log.Z2prior.noinvalid(n1, Z2.curr, Z, aBM, bBM)
+  } else {
+    stop("Invalid Z2prior value. Should not be here, match.arg() must not have worked.")
+  }
+  log.alpha <- log.alpha + log(mhmod)
   if (log(runif(1)) < log.alpha) {
     return(Z2.prop)
   } else {
@@ -264,6 +334,80 @@ calc.Z2.stepmatrix.smcmc <- function(ivec, jvec,
       calc.log.Z2prior.flat(n1, Z2.curr, Z)
     } else if (Z2prior == "noinv") {
       calc.log.Z2prior.noinvalid(n1, Z2.curr, Z, aBM, bBM)
+    } else {
+      stop("Invalid Z2prior value. Should not be here, match.arg() must not have worked.")
+    }
+  )
+  # Bring out of log scale
+  weights <- exp(weights)
+  # Calculate g(t) for all elements of the matrix
+  weights <- weights / (1 + weights)
+  # Divide by the normalizing constant
+  return(weights / sum(weights))
+}
+
+
+# This function produces a matrix of probabilities for each step in an informed
+# Z proposal. It is designed to work in the context of Zanella LB proposals within
+# an SMCMC context.
+# Returns: A matrix to hold, eventually, the proposal probability for a
+# move i,j. Each row corresponds to an element of file 2. Each column
+# corresponds to an element of the candidate set, in the order listed in `cand`.
+# The value in M[i,j] is the probability of making the move i,j. Uses the
+# Barker weights g(t) = t/(1+t)
+# Parameters
+# ivec - vector of indices of records in file 3 to consider for steps
+# jvec - vector of indices of records in previous files (candidates) to consider for steps
+# (everything else) - needed to calculate likelihoods for informed step probs
+calc.Z.stepmatrix.smcmc <- function(ivec, jvec,
+                                     cmpdata, m, u, Z.curr, Z2, aBM, bBM,
+                                     Z2prior) {
+  # Required filesizes
+  n1 <- cmpdata[[1]][[1]]$n1
+  # Initialize matrix
+  weights <- matrix(0, nrow=length(ivec), ncol=length(jvec))
+  # Fill in the posterior at each resulting position
+  for (fromidx in 1:length(ivec)) {
+    for (candidx in 1:length(jvec)) {
+      i <- ivec[fromidx]
+      j <- jvec[candidx]
+      # What Z2 would be proposed from modifying the pair (i,j)?
+      Z.prop <- perform.Z2.step(n1, Z.curr, i, j)$Z2
+      # Calculate posterior for new Z2
+      # First: check validity and calculate prior of Z2
+      weights[fromidx, candidx] <- if (!valid.link.state(n1, Z.prop, Z2)) {
+        # Need to do validity checking here since not all priors do it anymore
+        -Inf
+      } else if (Z2prior == "default") {
+        calc.log.Z2prior(n1, Z2, Z.prop, aBM, bBM)
+      } else if (Z2prior == "flat") {
+        calc.log.Z2prior.flat(n1, Z2, Z.prop)
+      } else if (Z2prior == "noinv") {
+        calc.log.Z2prior.noinvalid(n1, Z2, Z.prop, aBM, bBM)
+      } else {
+        stop("Invalid Z2prior value. Should not be here, match.arg() must not have worked.")
+      }
+      # Next: if valid, calculate prior of Z1, likelihood of file 3 data, and
+      # likelihood of previous data
+      if (weights[fromidx, candidx] > -Inf) {
+        weights[fromidx, candidx] <- weights[fromidx, candidx] +
+          calc.log.lkl.tracing(cmpdata[[2]], m, u, Z.prop, Z2) +
+          calc.log.lkl.tracing(cmpdata[[1]], m, u, c(), Z.prop) +
+          calc.log.Z2prior(n1, Z.prop, c(), aBM, bBM)
+      }
+    }
+  }
+  # Subtract the log posterior at the current state
+  weights <- weights - (
+    calc.log.lkl.tracing(cmpdata[[2]], m, u, Z.curr, Z2)
+    + calc.log.lkl.tracing(cmpdata[[1]], m, u, c(), Z.curr)
+    + calc.log.Z2prior(n1, Z.curr, c(), aBM, bBM)
+    + if (Z2prior == "default") {
+      calc.log.Z2prior(n1, Z2, Z.curr, aBM, bBM)
+    } else if (Z2prior == "flat") {
+      calc.log.Z2prior.flat(n1, Z2, Z.curr)
+    } else if (Z2prior == "noinv") {
+      calc.log.Z2prior.noinvalid(n1, Z2, Z.curr, aBM, bBM)
     } else {
       stop("Invalid Z2prior value. Should not be here, match.arg() must not have worked.")
     }
