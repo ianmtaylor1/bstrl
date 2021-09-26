@@ -298,7 +298,8 @@ tripartiteRL.smcmc.precmp <- function(
   directratio=TRUE,
   fastmu=directratio,
   Z2prior=c("default", "flat", "noinv"),
-  Zproposals=c("Sadinle", "Zanella"),
+  Zproposals=c("Zanella", "Sadinle"),
+  Zproposals.jumping=c("Sadinle", "Zanella"),
   blocksize=NULL
 ) {
   # Check and process inputs
@@ -312,6 +313,7 @@ tripartiteRL.smcmc.precmp <- function(
 
   # Process Z proposal parameter
   Zproposals <- match.arg(Zproposals)
+  Zproposals.jumping <- match.arg(Zproposals.jumping)
 
   # Pre-process comparison data and put into list
   comparisons.1to2 <- preproc.cmpdata(cmpdata.1to2)
@@ -355,12 +357,12 @@ tripartiteRL.smcmc.precmp <- function(
     #Z2.curr <- draw.Z2.global(n1, n2, n3, Z.curr, aBM, bBM)
     for (i in seq_len(nIter.jumping)) {
       # Z2 full conditional
-      if (Zproposals == "Sadinle") {
+      if (Zproposals.jumping == "Sadinle") {
         Z2.curr <- r_Z2_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, directratio, Z2prior)
-      } else if (Zproposals == "Zanella") {
+      } else if (Zproposals.jumping == "Zanella") {
         Z2.curr <- r_Z2_fc_smcmc_zanella(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, Z2prior, blocksize)
       } else {
-        stop("Invalid Z2 proposal name")
+        stop("Invalid Z2 proposal name (jumping kernel)")
       }
     }
 
