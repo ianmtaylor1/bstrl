@@ -10,14 +10,17 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
                                 bipartite.samp=NULL,
                                 nIter.bi=1200, burn.bi=round(nIter.bi*.1), bipartite.method="BRL",
                                 nIter.tri=nIter.bi-burn.bi, burn.tri=round(nIter.tri*.1),
-                                pprb.method="ordered", Z2blocksize=NULL,
+                                pprb.method=c("ordered","permuted","resampled"), Z2blocksize=NULL,
                                 three.stage=FALSE,
+                                directratio=TRUE,
+                                fastmu=directratio,
+                                Z2prior=c("default", "flat", "noinv"),
+                                Zproposals=c("Sadinle", "Zanella"),
                                 a=1, b=1, aBM=1, bBM=1, seed=0) {
   # Parameter checking
-  if (! is.element(pprb.method, c("ordered","permuted","resampled"))) {
-    stop("pprb.method must be one of 'ordered', 'permuted', or 'resampled'")
-  }
-
+  pprb.method <- match.arg(pprb.method)
+  Z2prior <- match.arg(Z2prior)
+  Zproposals <- match.arg(Zproposals)
 
   # 1. Size of files
   n1 <- cmpdata.1to3$n1
@@ -82,10 +85,6 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
   Z.curr.idx <- startidx # Keep track of index of current Z in previous samples
   Z2.samples[,1] <- n1 + n2 + seq_len(n3)
 
-  # Create array to hold record of acceptances: first row = m,u,Z. second row = Z2
-  # Contains all 1's by default, zeros written on rejection
-  accepted <- matrix(1, nrow=2, ncol=nIter.tri)
-  rownames(accepted) <- c("PPRB Z", "Locally Balanced Z2")
   # Creates array to track impossible proposals: proposals of m,u,Z from pprb
   # which have probability zero
   pprb.impossible <- rep(0, nIter.tri)
@@ -145,13 +144,26 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
       log.alpha1 <- (
         calc.log.lkl(cmpdata.list, m.curr, u.curr, Z.prop, Z2.curr, do.trace=trace)
         - calc.log.lkl(cmpdata.list, m.curr, u.curr, Z.curr, Z2.curr, do.trace=trace)
-        + calc.log.Z2prior(n1, Z2.curr, Z.prop, aBM, bBM)
-        - calc.log.Z2prior(n1, Z2.curr, Z.curr, aBM, bBM)
         + ddirichlet.multi(m.curr, bipartite.samp$m.fc.pars[,Z.prop.idx] + a, nDisagLevs, log=TRUE)
         + ddirichlet.multi(u.curr, bipartite.samp$u.fc.pars[,Z.prop.idx] + b, nDisagLevs, log=TRUE)
         - ddirichlet.multi(m.curr, bipartite.samp$m.fc.pars[,Z.curr.idx] + a, nDisagLevs, log=TRUE)
         - ddirichlet.multi(u.curr, bipartite.samp$u.fc.pars[,Z.curr.idx] + b, nDisagLevs, log=TRUE)
       )
+      if (Z2prior == "default") {
+        log.alpha1 <- log.alpha1 +
+          calc.log.Z2prior(n1, Z2.curr, Z.prop, aBM, bBM) -
+          calc.log.Z2prior(n1, Z2.curr, Z.curr, aBM, bBM)
+      } else if (Z2prior == "flat") {
+        log.alpha1 <- log.alpha1 +
+          calc.log.Z2prior.flat(n1, Z2.curr, Z.prop) -
+          calc.log.Z2prior.flat(n1, Z2.curr, Z.curr)
+      } else if (Z2prior == "noinv") {
+        log.alpha1 <- log.alpha1 +
+          calc.log.Z2prior.noinvalid(n1, Z2.curr, Z.prop, aBM, bBM) -
+          calc.log.Z2prior.noinvalid(n1, Z2.curr, Z.curr, aBM, bBM)
+      } else {
+        stop("Invalid Z2prior value. Should not be here, match.arg() must not have worked.")
+      }
       # Store the ratio
       pprb.log.ratio[i] <- log.alpha1
       # Decide whether to accept new values
@@ -162,7 +174,6 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
       } else {
         # reject
         Z.samples[,i] <- Z.curr
-        accepted[1,i] <- 0
         if (log.alpha1 == -Inf) {
           pprb.impossible[i] <- 1
         }
@@ -189,9 +200,22 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
       log.alpha1 <- (
         calc.log.lkl(cmpdata.list, m.prop, u.prop, Z.prop, Z2.curr, do.trace=trace)
         - calc.log.lkl(cmpdata.list, m.curr, u.curr, Z.curr, Z2.curr, do.trace=trace)
-        + calc.log.Z2prior(n1, Z2.curr, Z.prop, aBM, bBM)
-        - calc.log.Z2prior(n1, Z2.curr, Z.curr, aBM, bBM)
       )
+      if (Z2prior == "default") {
+        log.alpha1 <- log.alpha1 +
+          calc.log.Z2prior(n1, Z2.curr, Z.prop, aBM, bBM) -
+          calc.log.Z2prior(n1, Z2.curr, Z.curr, aBM, bBM)
+      } else if (Z2prior == "flat") {
+        log.alpha1 <- log.alpha1 +
+          calc.log.Z2prior.flat(n1, Z2.curr, Z.prop) -
+          calc.log.Z2prior.flat(n1, Z2.curr, Z.curr)
+      } else if (Z2prior == "noinv") {
+        log.alpha1 <- log.alpha1 +
+          calc.log.Z2prior.noinvalid(n1, Z2.curr, Z.prop, aBM, bBM) -
+          calc.log.Z2prior.noinvalid(n1, Z2.curr, Z.curr, aBM, bBM)
+      } else {
+        stop("Invalid Z2prior value. Should not be here, match.arg() must not have worked.")
+      }
       # Store the ratio
       pprb.log.ratio[i] <- log.alpha1
       # Decide whether to accept new values
@@ -206,7 +230,6 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
         Z.samples[,i] <- Z.curr
         m.samples[,i] <- m.curr
         u.samples[,i] <- u.curr
-        accepted[1,i] <- 0
         if (log.alpha1 == -Inf) {
           pprb.impossible[i] <- 1
         }
@@ -218,26 +241,16 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
 
     }
 
-    # 7.3: Propose new Z2
-    tmp <- draw.Z2.informed(cmpdata.list, Z.curr, Z2.curr, m.curr, u.curr,
-                            aBM, bBM, trace=trace, blocksize=Z2blocksize)
-    Z2.prop <- tmp$Z2
-    # Decide whether to accept new values
-    log.alpha2 <- (
-      calc.log.lkl(cmpdata.list, m.curr, u.curr, Z.curr, Z2.prop, do.trace=trace)
-      - calc.log.lkl(cmpdata.list, m.curr, u.curr, Z.curr, Z2.curr, do.trace=trace)
-      + calc.log.Z2prior(n1, Z2.prop, Z.curr, aBM, bBM)
-      - calc.log.Z2prior(n1, Z2.curr, Z.curr, aBM, bBM)
-      + log(tmp$mod) # Modifier for proposal probability from the informed proposal
-    )
-    if (-rexp(1) < log.alpha2) {
-      # accept
-      Z2.samples[,i] <- Z2.prop
+
+    # 7.3 (revised): propose new Z2, using the SMCMC function.
+    if (Zproposals == "Sadinle") {
+      Z2.curr <- r_Z2_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, directratio, Z2prior)
+    } else if (Zproposals == "Zanella") {
+      Z2.curr <- r_Z2_fc_smcmc_zanella(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, Z2prior, blocksize)
     } else {
-      # reject
-      Z2.samples[,i] <- Z2.curr
-      accepted[2,i] <- 0
+      stop("Invalid Z2 proposal name")
     }
+    Z2.samples[,i] <- Z2.curr
 
     # Print updates
     if (i  %% max(nIter.tri %/% 20, 1) == 0) {
@@ -251,7 +264,6 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
               Z2=Z2.samples[,keptsamples,drop=FALSE],
               m=m.samples[,keptsamples,drop=FALSE],
               u=u.samples[,keptsamples,drop=FALSE],
-              accepted=accepted[,keptsamples,drop=FALSE],
               pprb.impossible=pprb.impossible[keptsamples],
               Zprop.diffs=Zprop.diffs[keptsamples],
               pprb.log.ratio=pprb.log.ratio[keptsamples]))
