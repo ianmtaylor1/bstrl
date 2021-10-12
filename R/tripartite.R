@@ -57,7 +57,9 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
   # 3. Create precomputed data structures
   comparisons.1to3 <- preproc.cmpdata(cmpdata.1to3)
   comparisons.2to3 <- preproc.cmpdata(cmpdata.2to3)
+  comparisons.1to2 <- preproc.cmpdata(cmpdata.1to2)
   cmpdata.list <- list(comparisons.1to3, comparisons.2to3)
+  cmpdata.all <- list(list(comparisons.1to2), cmpdata.list)
   nDisagLevs <- comparisons.1to3$nDisagLevs
 
   # 4. Set up empty arrays of the appropriate size that will eventually be returned
@@ -244,9 +246,9 @@ tripartiteRL.precmp <- function(cmpdata.1to2, cmpdata.1to3, cmpdata.2to3, trace=
 
     # 7.3 (revised): propose new Z2, using the SMCMC function.
     if (Zproposals == "Sadinle") {
-      Z2.curr <- r_Z2_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, directratio, Z2prior)
+      Z2.curr <- r_Z2_fc_smcmc(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.all, aBM, bBM, directratio, Z2prior)
     } else if (Zproposals == "Zanella") {
-      Z2.curr <- r_Z2_fc_smcmc_zanella(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.list, aBM, bBM, Z2prior, blocksize)
+      Z2.curr <- r_Z2_fc_smcmc_zanella(Z.curr, Z2.curr, m.curr, u.curr, cmpdata.all, aBM, bBM, Z2prior, Z2blocksize)
     } else {
       stop("Invalid Z2 proposal name")
     }
