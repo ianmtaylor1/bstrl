@@ -4,22 +4,52 @@
 # Create an object of S3 class "streaminglinks", for files of the specified size
 # filesizes should be a vector of length k, for k files, containing the sizes
 # of each file in order
-streaminglinks <- function(filesizes) {
+streaminglinks <- function(filesizes, Z=NULL) {
   stopifnot(length(filesizes) >= 2)
   stopifnot(filesizes > 0)
   stopifnot(filesizes == floor(filesizes))
+  # Process supplied z, if any
+  if (is.null(Z)) {
+    Z <- seq_len(sum(filesizes))
+    W <- seq_len(sum(filesizes))
+  } else if (length(Z) == sum(filesizes)) {
+    stopifnot(checkvalidZ(Z)) # Sanity check for valid Z
+    W <- WfromZ(Z)
+  } else if (length(Z) == sum(filesizes[-1])) {
+    Z <- c(seq_len(filesizes[1]), Z)
+    stopifnot(checkvalidZ(Z)) # Sanity check for valid Z
+    W <- WfromZ(Z)
+  } else {
+    stop("Supplied Z must have length equal to total number of records, or total number of records except file 1.")
+  }
   # Create an initially unlinked configuration
   structure(
     list(
-      Z = seq_len(sum(filesizes)),
-      W = seq_len(sum(filesizes)),
+      Z = Z,
+      W = W,
       ns = filesizes
     ),
     class = "streaminglinks"
   )
 }
 
+# Take a concatenated Z vector and return the corresponding W (reversing the
+# links to point up from earlier record to later record)
+WfromZ <- function(Z) {
+  W <- seq_along(Z)
+  j <- which(Z <= seq_along(Z))
+  i <- Z[j]
+  W[i] <- j
+  W
+}
 
+# Check if a concatenated Z vector is valid
+checkvalidZ <- function(Z) {
+  if (any(Z > seq_along(Z))) return(FALSE)
+  links <- Z[Z < seq_along(Z)]
+  if (length(unique(links)) != length(links)) return(FALSE)
+  return(TRUE)
+}
 
 #### Querying the link object
 
