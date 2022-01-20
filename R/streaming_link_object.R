@@ -53,6 +53,12 @@ checkvalidZ <- function(Z) {
 
 #### Querying the link object
 
+# Return whether the streaming link object is valid: Z represents a valid
+# link state and all its internal components are in agreement
+# This should never be needed, but is here just in case.
+isvalid <- function(sl) {
+  (length(sl$Z) == sum(sl$ns)) && checkvalidZ(sl$Z) && all(sl$W == WfromZ(sl$Z))
+}
 
 # Return the number of files linked by the given streaminglinks object
 nfiles <- function(sl) {
