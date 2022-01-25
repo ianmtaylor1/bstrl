@@ -120,7 +120,7 @@ bipartiteRL.precmp <- function(cmpdata, nIter=1000, burn=round(nIter*.1), a=1, b
 #' @param aBM,bBM Prior parameters for beta-linkage prior.
 #' @param seed Random seed to set at beginning of MCMC run
 #'
-#' @value A list with class "bstrlstate" which can be passed to future streaming
+#' @return A list with class "bstrlstate" which can be passed to future streaming
 #'   updates.
 #'
 #' @export

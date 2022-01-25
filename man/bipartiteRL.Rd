@@ -42,6 +42,10 @@ is nIter - burn.}
 
 \item{seed}{Random seed to set at beginning of MCMC run}
 }
+\value{
+A list with class "bstrlstate" which can be passed to future streaming
+updates.
+}
 \description{
 This function establishes a baseline linkage between two files which can be
 built upon with streaming updates adding more files. It outsources the linkage
