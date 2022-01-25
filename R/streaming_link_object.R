@@ -75,6 +75,11 @@ islinked <- function(sl, file1, record1, file2, record2) {
   gidx1 <- local.to.global(sl$ns, file1, record1)
   gidx2 <- local.to.global(sl$ns, file2, record2)
 
+  islinked.gl(sl, gidx1, gidx2)
+}
+
+islinked.gl <- function(sl, gidx1, gidx2) {
+  stopifnot(gidx1 < gidx2)
   # Walk back from the second record until reaching the end of the chain,
   # reaching the first record, or passing the first record
   cur <- gidx2
@@ -127,6 +132,10 @@ alllinks <- function(sl, idx=c("global", "local")) {
 # object. If the supplied record is not linked to anything upstream, do nothing.
 unlink.up <- function(sl, file, record) {
   globalidx <- local.to.global(sl$ns, file, record)
+  unlink.up.gl(sl, globalidx)
+}
+
+unlink.up.gl <- function(sl, globalidx) {
   if (sl$W[globalidx] > globalidx) {
     sl$Z[sl$W[globalidx]] <- sl$W[globalidx]
     sl$W[globalidx] <- globalidx
@@ -139,6 +148,10 @@ unlink.up <- function(sl, file, record) {
 # object. If the supplied record is not linked to anything downstream, do nothing.
 unlink.down <- function(sl, file, record) {
   globalidx <- local.to.global(sl$ns, file, record)
+  unlink.down.gl(sl, globalidx)
+}
+
+unlink.down.gl <- function(sl, globalidx) {
   if (sl$Z[globalidx] < globalidx) {
     sl$W[sl$Z[globalidx]] <- sl$Z[globalidx]
     sl$Z[globalidx] <- globalidx
@@ -156,27 +169,76 @@ add.link <- function(sl, file1, record1, file2, record2,
   # Get record global indices
   gidx1 <- local.to.global(sl$ns, file1, record1)
   gidx2 <- local.to.global(sl$ns, file2, record2)
+
+  add.link.gl(sl, gidx1, gidx2, conflict)
+}
+
+add.link.gl <- function(sl, gidx1, gidx2,
+                        conflict=c("null", "warn", "error", "overwrite")) {
+  stopifnot(gidx1 < gidx2)
+  conflict <- match.arg(conflict)
   # Check if there are conflicts
   if ((sl$Z[gidx2] < gidx2) || (sl$W[gidx1] > gidx1)) {
     # If yes, we have to decide how to handle it
     if (conflict == "null") {
       return(NULL)
     } else if (conflict == "error") {
-      stop("Cannot link file", file1, "record", record1, "to file", file2, "record", record2)
+      stop("Cannot link global record ", gidx1, " to global record ", gidx2)
     } else {
       if(conflict == "warn") {
-        warning("Conflicts in linking file", file1, "record", record1, "to file", file2, "record", record2,
+        warning("Conflicts in linking global record ", gidx1, " to global record ", gidx2,
                 "- overwriting existing links")
       }
       # For either 'warn' or 'overwrite', unlink existing links and continue
-      sl <- unlink.down(sl, file2, record2)
-      sl <- unlink.up(sl, file1, record1)
+      sl <- unlink.down.gl(sl, gidx2)
+      sl <- unlink.up.gl(sl, gidx1)
     }
   }
   # If we get here, we can create the link and return the modified streaming link object
   sl$Z[gidx2] <- gidx1
   sl$W[gidx1] <- gidx2
   return(sl)
+}
+
+# Swap out links among the first k-1 files of sl with the value supplied, Zpre.
+# Zpre can be a vector of length n1 + ... + n(k-1) OR length n2 + ... + n(k-1).
+# If the latter, the initial sequence is implied as seq_len(n1).
+# This is used to perform the PPRB step which replaces previous Z's with
+# resampled values from the prior stage.
+swapprefix <- function(sl, Zpre,
+                       conflict=c("null", "error")) {
+  conflict <- match.arg(conflict)
+
+  nfiles <- length(sl$ns)
+
+  # Add redundant sequence to beginning if necessary
+  if (length(Zpre) == sum(sl$ns[seq_len(nfiles - 2) + 1])) {
+    Zpre <- c(seq_len(sl$ns[1]), Zpre)
+  } else if (length(Zpre) != sum(sl$ns[seq_len(nfiles - 1)])) {
+    stop("Zpre has incorrect length")
+  }
+
+  # Create new Z from prefix and last file
+  Znew <- c(Zpre, sl$Z[seq(length(Zpre) + 1, sum(sl$ns))])
+
+  # Construct into new sl object, catch any errors
+  slnew <- tryCatch(
+    streaminglinks(sl$ns, Znew),
+    error = function(c) NULL
+  )
+
+  if (is.null(slnew)) {
+    # If there is a conflict, we have to decide how to handle it. Too many
+    # things potentially wrong to overwrite or warn, must fail hard. Either
+    # return null or raise error.
+    if (conflict == "null") {
+      return(NULL)
+    } else if (conflict == "error") {
+      stop("Cannot link file", file1, "record", record1, "to file", file2, "record", record2)
+    }
+  }
+
+  return(slnew)
 }
 
 
