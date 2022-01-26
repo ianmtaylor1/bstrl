@@ -65,6 +65,11 @@ nfiles <- function(sl) {
   length(sl$ns)
 }
 
+# Return a saveable Z vector representing this object, discarding redundant
+# information (i.e. the self-links from file 1 to nowhere)
+savestate <- function(sl) {
+  sl$Z[seq(sl$ns[1] + 1, length(sl$Z))]
+}
 
 # Return True/False whether the two record are coreferent
 islinked <- function(sl, file1, record1, file2, record2) {
