@@ -29,18 +29,22 @@ PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, bloc
     nIter <- ncol(state$Z)
   }
 
+  # Groupings for m and u
+  nDisagLevs <- cmpdata[[1]][[1]]$nDisagLevs
+
   # Initialize streaming link object. Unlinked to new file, randomly chosen
   # value from existing state
   filesizes <- c()
   for (i in seq_along(files)) {
     filesizes[i] <- nrow(files[i])
   }
+  pprb.index.curr <- sample(ncol(state$Z), 1)
   slcurr <- streaminglinks(filesizes)
-  Zpre <- state$Z[,sample(ncol(state$Z), 1)]
+  Zpre <- state$Z[,pprb.index.curr]
   slcurr <- swapprefix(sl, Zpre, conflict = "error")
   # Initialize m and u
-  mcurr <- rep(NA, nrow(state$m))
-  ucurr <- rep(NA, nrow(state$u))
+  mcurr <- state$m[,pprb.index.curr]
+  ucurr <- state$u[,pprb.index.curr]
 
   # Initialize matrices to save new posterior samples
   msave <- matrix(NA, nrow=nrow(state$m), ncol=nIter)
@@ -49,32 +53,37 @@ PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, bloc
 
   # Main PPRB process
   for (iter in seq_len(nIter)) {
+    # New pprb proposal index
+    pprb.index.prop <- sample(ncol(state$Z), 1)
     if (threestep) {
       # Sample m and u from full conditional
-      tmp <- list(m=mcurr, u=ucurr) # TODO
+      tmp <- list(m=mcurr, u=ucurr) # TODO: sample m and u from full conditional
       mcurr <- tmp$m
       ucurr <- tmp$u
       # Sample previous Z's with PPRB
-      pprbidx <- sample(ncol(state$Z), 1)
-      slprop <- swapprefix(sl, state$Z[,pprbidx], conflict = "null")
+      slprop <- swapprefix(sl, state$Z[,pprb.index.prop], conflict = "null")
       if (!is.null(slprop)) { # Check for impossible proposals
         log.alpha <- (
           calc.log.lkl.lastfile(cmpdata[[length(files) - 1]], mcurr, ucurr, slprop) -
           calc.log.lkl.lastfile(cmpdata[[length(files) - 1]], mcurr, ucurr, slcurr) +
           log.Zprior(slprop, state$priors$aBM, state$priors$bBM, vec="last") -
-          log.Zprior(slcurr, state$priors$aBM, state$priors$bBM, vec="last")
-        ) # TODO: remaining dirichlet components
+          log.Zprior(slcurr, state$priors$aBM, state$priors$bBM, vec="last") +
+          ddirichlet.multi(m.curr, state$m.fc.pars[,pprb.index.prop] + state$priors$a, nDisagLevs, log=T) +
+          ddirichlet.multi(u.curr, state$u.fc.pars[,pprb.index.prop] + state$priors$b, nDisagLevs, log=T) -
+          ddirichlet.multi(m.curr, state$m.fc.pars[,pprb.index.curr] + state$priors$a, nDisagLevs, log=T) -
+          ddirichlet.multi(u.curr, state$u.fc.pars[,pprb.index.curr] + state$priors$b, nDisagLevs, log=T)
+        )
 
         if (log(runif(1)) < log.alpha) {
           slcurr <- slprop
+          pprb.index.curr <- pprb.index.prop
         }
       }
     } else { # two step
       # Sample m, u, and previous Z's together with PPRB
-      pprbidx <- sample(ncol(state$Z), 1)
-      slprop <- swapprefix(sl, state$Z[,pprbidx], conflict = "null")
-      mprop <- state$m[,pprbidx]
-      uprop <- state$u[,pprbidx]
+      slprop <- swapprefix(sl, state$Z[,pprb.index.prop], conflict = "null")
+      mprop <- state$m[,pprb.index.prop]
+      uprop <- state$u[,pprb.index.prop]
       if (!is.null(slprop)) { # Check for impossible proposals
         log.alpha <- (
           calc.log.lkl.lastfile(cmpdata[[length(files) - 1]], mprop, uprop, slprop) -
@@ -87,6 +96,7 @@ PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, bloc
           mcurr <- mprop
           ucurr <- uprop
           slcurr <- slprop
+          pprb.index.curr <- pprb.index.prop
         }
       }
     }
