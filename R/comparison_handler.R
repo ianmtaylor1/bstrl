@@ -273,3 +273,47 @@ comparison <- function(cmpdata, file1, file2, rec1, rec2) {
 
   filepair$comparisons[(rec2 - 1) * nf1 + rec1, ]
 }
+
+###############################################################################
+
+# Given a list of comparison data objects and a link state (Z and Z2), returns
+# the total counts of disagreement levels for matches and nonmatches
+# Parameters:
+#   cmpdata - a list of comparison data objects. There are k-1 total objects
+#             in the list. The first compares file 1 to file k, and so on, until
+#             the last which compares file k-1 to file k. All objects should
+#             therefore have equal n2 values.
+#   sl = streaminglinks object defining current link state
+disag.counts.lastfile <- function(cmpdata, sl) {
+
+  # First, extract list of all linked pairs of records in local indexing to
+  # separate them by file.
+  links <- alllinks(sl, idx="local")
+
+  # Find the number of the most recent file
+  nfiles <- length(cmpdata) + 1
+
+  tot.match.count <- tot.nonmatch.count <- rep(0, sum(cmpdata[[1]]$nDisagLevs))
+
+  # Go through each comparison data object file by file
+  for (f in seq_len(nfiles - 1)) {
+    pairidx <- (links$file1 == f) & (links$file2 == nfiles)
+    n1 <- cmpdata[[f]]$n1
+
+    if (sum(pairidx) > 0) {
+      leftrecords <- links$record1[pairidx]
+      rightrecords <- links$record2[pairidx]
+      rows <- rightrecords * n1 + leftrecords
+      match.count <- colSums(cmpdata[[f]]$comparisons[rows,,drop=F])
+    } else {
+      match.count <- rep(0, sum(cmpdata[[f]]$nDisagLevs))
+    }
+    nonmatch.count <- colSums(cmpdata[[f]]$comparisons) - match.count
+
+    # Add this file's contribution to total
+    tot.match.count <- tot.match.count + match.count
+    tot.nonmatch.count <- tot.nonmatch.count + nonmatch.count
+  }
+
+  return(list(match=tot.match.count, nonmatch=tot.nonmatch.count))
+}
