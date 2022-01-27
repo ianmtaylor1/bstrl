@@ -50,6 +50,7 @@ PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, bloc
   msave <- matrix(NA, nrow=nrow(state$m), ncol=nIter)
   usave <- matrix(NA, nrow=nrow(state$u), ncol=nIter)
   Zsave <- matrix(NA, nrow=length(savestate(sl)), ncol=nIter)
+  pprb.index.save <- rep(NA, nIter)
 
   # Main PPRB process
   for (iter in seq_len(nIter)) {
@@ -57,7 +58,8 @@ PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, bloc
     pprb.index.prop <- sample(ncol(state$Z), 1)
     if (threestep) {
       # Sample m and u from full conditional
-      tmp <- list(m=mcurr, u=ucurr) # TODO: sample m and u from full conditional
+      tmp <- r_m_u_fc_pprb(cmpdata[[length(files) - 1]], slcurr, state$priors$a, state$priors$b,
+                           state$m.fc.pars[,pprb.index.curr], state$u.fc.pars[,pprb.index.curr])
       mcurr <- tmp$m
       ucurr <- tmp$u
       # Sample previous Z's with PPRB
@@ -102,6 +104,7 @@ PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, bloc
     }
     msave[,iter] <- mcurr
     usave[,iter] <- ucurr
+    pprb.index.save[iter] <- pprb.index.curr
 
     # Sample Zk, the latest Z vector using LB proposals
     # TODO

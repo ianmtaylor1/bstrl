@@ -35,6 +35,20 @@ r_m_u_fc <- function(cmpdata, Z, Z2,
   return(list(m=m, u=u))
 }
 
+r_m_u_fc_pprb <- function(cmpdata, sl, a, b, m.prev.pars, u.prev.pars) {
+  # 1. Determine the contribution of the latest file's comparison data to the
+  # full conditional distribution
+  counts <- disag.counts.lastfile(cmpdata, sl)
+  m.new.pars <- counts$match
+  u.new.pars <- counts$nonmatch
+  # 2. combine a, m.prev.pars and new m pars to sample m
+  m <- rdirichlet.multi(alpha=m.new.pars + m.prev.pars + a, groups=cmpdata[[1]]$nDisagLevs)
+  # 3. combine b, u.prev.pars and new u pars to sample u
+  u <- rdirichlet.multi(alpha=u.new.pars + u.prev.pars + b, groups=cmpdata[[1]]$nDisagLevs)
+  # 4. Put into list and return
+  return(list(m=m, u=u))
+}
+
 # Draw m and u from their full conditional distributions in SMCMC context.
 # Assumes cmpdata is a list of two lists: first, the cmpdata between files 1 and 2
 # Next the cmpdata between files 1 and 3, and 2 and 3. This format could be expanded
