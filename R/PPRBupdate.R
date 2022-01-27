@@ -111,16 +111,28 @@ PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, bloc
     Zsave[,iter] <- savestate(slcurr)
   }
 
-  # Construct and return the new posterior state
+  # Store updated summary statistics of comparisons for use later
+  m.fc.pars <- matrix(0, nrow=nrow(msave), ncol=nIter)
+  u.fc.pars <- matrix(0, nrow=nrow(msave), ncol=nIter)
+  for (i in 1:nIter) {
+    tmp <- disag.counts.lastfile(list(cmpdata), streaminglinks(filesizes, chain$Z[,i]))
+    m.fc.pars[,i] <- tmp$match + state$m.fc.pars[,pprb.index.save[i]]
+    u.fc.pars[,i] <- tmp$nonmatch + state$u.fc.pars[,pprb.index.save[i]]
+  }
+
+  # Burn and Construct and return the new posterior state
+  iterfilter <- setdiff(seq_len(nIter), seq_len(burn))
   structure(
     list(
-      Z = Zsave,
-      m = msave,
-      u = uszve,
+      Z = Zsave[,iterfilter,drop=F],
+      m = msave[,iterfilter,drop=F],
+      u = usave[,iterfilter,drop=F],
       files = files,
       comparisons = cmpdata,
       priors = state$priors,
       cmpdetails = cmpdetails,
+      m.fc.pars = m.fc.pars[,iterfilter,drop=F],
+      u.fc.pars = u.fc.pars[,iterfilter,drop=F]
     ),
     class = "bstrlstate"
   )
