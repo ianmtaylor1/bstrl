@@ -58,20 +58,30 @@ PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, bloc
       pprbidx <- sample(ncol(state$Z), 1)
       slprop <- swapprefix(sl, state$Z[,pprbidx], conflict = "null")
       if (!is.null(slprop)) { # Check for impossible proposals
-        log.alpha <- 0 # TODO
+        log.alpha <- (
+          calc.log.lkl.lastfile(cmpdata[[length(files) - 1]], mcurr, ucurr, slprop) -
+          calc.log.lkl.lastfile(cmpdata[[length(files) - 1]], mcurr, ucurr, slcurr) +
+          log.Zprior(slprop, state$priors$aBM, state$priors$bBM, vec="last") -
+          log.Zprior(slcurr, state$priors$aBM, state$priors$bBM, vec="last")
+        ) # TODO: remaining dirichlet components
 
         if (log(runif(1)) < log.alpha) {
           slcurr <- slprop
         }
       }
-    } else {
+    } else { # two step
       # Sample m, u, and previous Z's together with PPRB
       pprbidx <- sample(ncol(state$Z), 1)
       slprop <- swapprefix(sl, state$Z[,pprbidx], conflict = "null")
       mprop <- state$m[,pprbidx]
       uprop <- state$u[,pprbidx]
       if (!is.null(slprop)) { # Check for impossible proposals
-        log.alpha <- 0 # TODO
+        log.alpha <- (
+          calc.log.lkl.lastfile(cmpdata[[length(files) - 1]], mprop, uprop, slprop) -
+          calc.log.lkl.lastfile(cmpdata[[length(files) - 1]], mcurr, ucurr, slcurr) +
+          log.Zprior(slprop, state$priors$aBM, state$priors$bBM, vec="last") -
+          log.Zprior(slcurr, state$priors$aBM, state$priors$bBM, vec="last")
+        )
 
         if (log(runif(1)) < log.alpha) {
           mcurr <- mprop
