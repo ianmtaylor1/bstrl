@@ -35,6 +35,24 @@ r_m_u_fc <- function(cmpdata, Z, Z2,
   return(list(m=m, u=u))
 }
 
+# Draw m and u from their full conditional distributions.
+# Parameters:
+#   cmpdata - a list of comparison data objects. There are k-1 total objects
+#             in the list. The first compares file 1 to file k, and so on, until
+#             the last which compares file k-1 to file k. All objects should
+#             therefore have equal n2 values.
+#   sl - streaminglinks object defining current state of links between files.
+#   a, b - prior hyperparameters for the distributions of m and u, respectively.
+#          See ?BRL::BRL for explanation
+#   m.prev.pars - additions to hyperparameters for m from matches between
+#          previous files. These are computed in a post-processing step of the
+#          samples of Z, and can just be passed directly here. Provides the
+#          contribution of the comparisons between all k-1 previous files, i.e.
+#          comparisons not included in cmpdata.
+#   u.prev.pars - same as m.prev.pars, but for u.
+#   trace - whether to do link tracing.
+# Return:
+#   A list with two elements, m and u, which contain the fc sampled m and u.
 r_m_u_fc_pprb <- function(cmpdata, sl, a, b, m.prev.pars, u.prev.pars) {
   # 1. Determine the contribution of the latest file's comparison data to the
   # full conditional distribution
