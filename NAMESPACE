@@ -3,6 +3,3 @@
 export(PPRBupdate)
 export(SMCMCupdate)
 export(bipartiteRL)
-export(precision)
-export(preproc.cmpdata)
-export(recall)
