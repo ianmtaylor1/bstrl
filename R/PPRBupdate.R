@@ -10,7 +10,7 @@ PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, bloc
   for (i in seq_along(state$files)) {
     f <- state$files[[i]]
     flds1 <- state$cmpdetails$flds[[i]]
-    thiscmp <- BRL::compareRecords(
+    thiscmp <- compareRecords(
       df1 = f, df2 = newfile, flds = state$cmpdetails$fldsglobal,
       flds1 = flds1, flds2 = flds, types = state$cmpdetails$types,
       breaks = state$cmpdetails$breaks

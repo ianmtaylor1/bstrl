@@ -35,7 +35,7 @@ bipartiteRL <- function(df1, df2,
     stop("burn should be an integer that satisfies 0 <= burn < nIter")
 
   # create comparison data
-  cmpdata <- BRL::compareRecords(df1, df2, flds, flds1, flds2, types, breaks)
+  cmpdata <- compareRecords(df1, df2, flds, flds1, flds2, types, breaks)
 
   # Perform linkage
   chain <- BRL::bipartiteGibbs(cmpdata, nIter, a, b, aBM, bBM, seed)
