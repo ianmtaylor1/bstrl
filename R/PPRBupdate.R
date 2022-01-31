@@ -12,10 +12,10 @@ PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, bloc
     flds1 <- state$cmpdetails$flds[[i]]
     thiscmp <- BRL::compareRecords(
       df1 = f, df2 = newfile, flds = state$cmpdetails$fldsglobal,
-      flds1 = flds1, flds2 = flds2, types = state$cmpdetails$types,
+      flds1 = flds1, flds2 = flds, types = state$cmpdetails$types,
       breaks = state$cmpdetails$breaks
     )
-    newcmps <- c(newcmp, list(thiscmp))
+    newcmps <- c(newcmps, list(thiscmp))
   }
   cmpdata <- c(state$comparisons, list(newcmps))
   # Append the file to the list of files
@@ -34,14 +34,14 @@ PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, bloc
 
   # Initialize streaming link object. Unlinked to new file, randomly chosen
   # value from existing state
-  filesizes <- c()
+  filesizes <- rep(0, length(files))
   for (i in seq_along(files)) {
-    filesizes[i] <- nrow(files[i])
+    filesizes[i] <- nrow(files[[i]])
   }
   pprb.index.curr <- sample(ncol(state$Z), 1)
   slcurr <- streaminglinks(filesizes)
   Zpre <- state$Z[,pprb.index.curr]
-  slcurr <- swapprefix(sl, Zpre, conflict = "error")
+  slcurr <- swapprefix(slcurr, Zpre, conflict = "error")
   # Initialize m and u
   mcurr <- state$m[,pprb.index.curr]
   ucurr <- state$u[,pprb.index.curr]
@@ -49,7 +49,7 @@ PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, bloc
   # Initialize matrices to save new posterior samples
   msave <- matrix(NA, nrow=nrow(state$m), ncol=nIter)
   usave <- matrix(NA, nrow=nrow(state$u), ncol=nIter)
-  Zsave <- matrix(NA, nrow=length(savestate(sl)), ncol=nIter)
+  Zsave <- matrix(NA, nrow=length(savestate(slcurr)), ncol=nIter)
   pprb.index.save <- rep(NA, nIter)
 
   # Main PPRB process
@@ -63,17 +63,17 @@ PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, bloc
       mcurr <- tmp$m
       ucurr <- tmp$u
       # Sample previous Z's with PPRB
-      slprop <- swapprefix(sl, state$Z[,pprb.index.prop], conflict = "null")
+      slprop <- swapprefix(slcurr, state$Z[,pprb.index.prop], conflict = "null")
       if (!is.null(slprop)) { # Check for impossible proposals
         log.alpha <- (
           calc.log.lkl.lastfile(cmpdata[[length(files) - 1]], mcurr, ucurr, slprop) -
           calc.log.lkl.lastfile(cmpdata[[length(files) - 1]], mcurr, ucurr, slcurr) +
           log.Zprior(slprop, state$priors$aBM, state$priors$bBM, vec="last") -
           log.Zprior(slcurr, state$priors$aBM, state$priors$bBM, vec="last") +
-          ddirichlet.multi(m.curr, state$m.fc.pars[,pprb.index.prop] + state$priors$a, nDisagLevs, log=T) +
-          ddirichlet.multi(u.curr, state$u.fc.pars[,pprb.index.prop] + state$priors$b, nDisagLevs, log=T) -
-          ddirichlet.multi(m.curr, state$m.fc.pars[,pprb.index.curr] + state$priors$a, nDisagLevs, log=T) -
-          ddirichlet.multi(u.curr, state$u.fc.pars[,pprb.index.curr] + state$priors$b, nDisagLevs, log=T)
+          ddirichlet.multi(mcurr, state$m.fc.pars[,pprb.index.prop] + state$priors$a, nDisagLevs, log=T) +
+          ddirichlet.multi(ucurr, state$u.fc.pars[,pprb.index.prop] + state$priors$b, nDisagLevs, log=T) -
+          ddirichlet.multi(mcurr, state$m.fc.pars[,pprb.index.curr] + state$priors$a, nDisagLevs, log=T) -
+          ddirichlet.multi(ucurr, state$u.fc.pars[,pprb.index.curr] + state$priors$b, nDisagLevs, log=T)
         )
 
         if (log(runif(1)) < log.alpha) {
@@ -116,7 +116,7 @@ PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, bloc
   m.fc.pars <- matrix(0, nrow=nrow(msave), ncol=nIter)
   u.fc.pars <- matrix(0, nrow=nrow(msave), ncol=nIter)
   for (i in 1:nIter) {
-    tmp <- disag.counts.lastfile(list(cmpdata), streaminglinks(filesizes, chain$Z[,i]))
+    tmp <- disag.counts.lastfile(cmpdata[[length(files) - 1]], streaminglinks(filesizes, Zsave[,i]))
     m.fc.pars[,i] <- tmp$match + state$m.fc.pars[,pprb.index.save[i]]
     u.fc.pars[,i] <- tmp$nonmatch + state$u.fc.pars[,pprb.index.save[i]]
   }
