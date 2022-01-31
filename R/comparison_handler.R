@@ -308,7 +308,7 @@ disag.counts.lastfile <- function(cmpdata, sl) {
     } else {
       match.count <- rep(0, sum(cmpdata[[f]]$nDisagLevs))
     }
-    nonmatch.count <- colSums(cmpdata[[f]]$comparisons) - match.count
+    nonmatch.count <- attr(cmpdata[[f]]$comparisons, "totals") - match.count
 
     # Add this file's contribution to total
     tot.match.count <- tot.match.count + match.count
