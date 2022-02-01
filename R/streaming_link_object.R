@@ -129,6 +129,59 @@ alllinks <- function(sl, idx=c("global", "local")) {
   }
 }
 
+# Create blocks for blocked locally balanced proposals
+# file = the file number whose links we intend to update. The blocks will
+#   contain a subset of the records from this file, and a subset of the records
+#   from all previous files
+# blocksize = how
+createblocks <- function(sl, file, blocksize=NULL,
+                         method=c("approximate", "exact")) {
+  method <- match.arg(method)
+  stopifnot(file >= 2, file <= length(sl$ns))
+
+  # File sizes
+  nk <- sl$ns[file]
+  nprev <- sum(sl$ns[seq_len(file-1)])
+  # Candidates for block inclusion
+  totalj <- nprev + seq_len(nk)
+  totali <- seq_len(nprev)
+  totali <- totali[(sl$W[totali] == totali) | (sl$W[totali] > nprev)]
+
+  # First, correct blocksize
+  if (is.null(blocksize)) {
+    bsright <- nk
+    bsleft <- length(totali)
+  } else {
+    bsright <- bsleft <- blocksize
+  }
+  if (bsright > nk) {
+    bsright <- nk
+  }
+  if (bsleft > length(totali)) {
+    bsleft <- length(totali)
+  }
+
+  iblock <- jblock <- c()
+  if (method == "approximate") {
+    # Now cycle until we have nonempty blocks
+    while ((length(iblock) == 0) || (length(jblock) == 0)) {
+      jblock <- totalj[sample(nk, bsright)]
+      iblock <- totali[sample(length(totali), bsleft)]
+      # Remove anything not linking within the block
+      ikeep <- ((sl$W[iblock] == iblock) | (sl$W[iblock] %in% jblock))
+      jkeep <- ((sl$Z[jblock] == jblock) | (sl$Z[jblock] %in% iblock))
+      iblock <- iblock[ikeep]
+      jblock <- jblock[jkeep]
+    }
+  } else if (method == "exact") {
+    # TODO: algorithm to select blocks exactly matching blocksize
+    stop("Exact block selection not implemented")
+  }
+
+  return(list(iblock=iblock, jblock=jblock))
+}
+
+
 #### Manipulating link objects
 
 
@@ -246,6 +299,37 @@ swapprefix <- function(sl, Zpre,
   return(slnew)
 }
 
+
+# Perform either an add, delete, swap, or double-swap operation on index i and
+# index j (globally indexed), for locally balanced proposals
+performstep <- function(sl, i, j) {
+  stopifnot(i >= 1, i < j, j <= length(sl$Z))
+  # Save the current link from each for easy reference
+  i.linkedto <- sl$W[i]
+  j.linkedto <- sl$Z[j]
+  # Check possibilities and perform steps
+  slnew <- sl # New state
+  reverse <- c(i,j) # Pair which can undo the move from the new state
+  if (i.linkedto == j) { # Delete
+    slnew <- unlink.down.gl(sl, j)
+  } else if ((i.linkedto == i) && (j.linkedto == j)) { # Add
+    slnew <- add.link.gl(sl, i, j, conflict="error") # Should be no conflict
+  } else if ((i.linkedto == i) && (j.linkedto < j)) { # Single-swap 1
+    slnew <- add.link.gl(sl, i, j, conflict="overwrite")
+    reverse <- c(j.linkedto, j) # Reverse single-swap
+  } else if ((i.linkedto > i) && (j.linkedto == j)) { # Single-swap 2
+    slnew <- add.link.gl(sl, i, j, conflict="overwrite")
+    reverse <- c(i, i.linkedto) # Reverse single-swap
+  } else if ((i.linkedto > i) && (j.linkedto < j)) { # Double-swap
+    slnew <- add.link.gl(add.link.gl(sl, i, j, conflict="overwrite"),
+                         i.linkedto, j.linkedto, conflict="error")
+    reverse <- c(i, i.linkedto)
+  } else { # Catch-all
+    stop("Unexpected error")
+  }
+
+  list(state=slnew, reverse=reverse)
+}
 
 #### Index translation
 
