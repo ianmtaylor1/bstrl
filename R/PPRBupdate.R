@@ -83,7 +83,7 @@ PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, bloc
       }
     } else { # two step
       # Sample m, u, and previous Z's together with PPRB
-      slprop <- swapprefix(sl, state$Z[,pprb.index.prop], conflict = "null")
+      slprop <- swapprefix(slcurr, state$Z[,pprb.index.prop], conflict = "null")
       mprop <- state$m[,pprb.index.prop]
       uprop <- state$u[,pprb.index.prop]
       if (!is.null(slprop)) { # Check for impossible proposals

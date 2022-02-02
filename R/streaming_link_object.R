@@ -134,48 +134,45 @@ alllinks <- function(sl, idx=c("global", "local")) {
 #   contain a subset of the records from this file, and a subset of the records
 #   from all previous files
 # blocksize = how
-createblocks <- function(sl, file, blocksize=NULL,
-                         method=c("approximate", "exact")) {
-  method <- match.arg(method)
+createblocks <- function(sl, file, blocksize=NULL) {
+
   stopifnot(file >= 2, file <= length(sl$ns))
 
   # File sizes
   nk <- sl$ns[file]
   nprev <- sum(sl$ns[seq_len(file-1)])
-  # Candidates for block inclusion
+  # Right side candidates for block inclusion
   totalj <- nprev + seq_len(nk)
-  totali <- seq_len(nprev)
-  totali <- totali[(sl$W[totali] == totali) | (sl$W[totali] > nprev)]
 
   # First, correct blocksize
   if (is.null(blocksize)) {
     bsright <- nk
-    bsleft <- length(totali)
+    bsleft <- nprev
   } else {
     bsright <- bsleft <- blocksize
   }
+  # Reduce right side blocksize if necessary
   if (bsright > nk) {
     bsright <- nk
   }
+
+  iblock <- jblock <- c()
+  # Filter left hand side records to only available (unlinked or linked to/past
+  # this file)
+  totali <- seq_len(nprev)
+  totali <- totali[(sl$W[totali] == totali) | (sl$W[totali] > nprev)]
   if (bsleft > length(totali)) {
     bsleft <- length(totali)
   }
-
-  iblock <- jblock <- c()
-  if (method == "approximate") {
-    # Now cycle until we have nonempty blocks
-    while ((length(iblock) == 0) || (length(jblock) == 0)) {
-      jblock <- totalj[sample(nk, bsright)]
-      iblock <- totali[sample(length(totali), bsleft)]
-      # Remove anything not linking within the block
-      ikeep <- ((sl$W[iblock] == iblock) | (sl$W[iblock] %in% jblock))
-      jkeep <- ((sl$Z[jblock] == jblock) | (sl$Z[jblock] %in% iblock))
-      iblock <- iblock[ikeep]
-      jblock <- jblock[jkeep]
-    }
-  } else if (method == "exact") {
-    # TODO: algorithm to select blocks exactly matching blocksize
-    stop("Exact block selection not implemented")
+  # Now cycle until we have nonempty blocks
+  while ((length(iblock) == 0) || (length(jblock) == 0)) {
+    jblock <- totalj[sample(nk, bsright)]
+    iblock <- totali[sample(length(totali), bsleft)]
+    # Remove anything not linking within the block
+    ikeep <- ((sl$W[iblock] == iblock) | (sl$W[iblock] %in% jblock))
+    jkeep <- ((sl$Z[jblock] == jblock) | (sl$Z[jblock] %in% iblock))
+    iblock <- iblock[ikeep]
+    jblock <- jblock[jkeep]
   }
 
   return(list(iblock=iblock, jblock=jblock))
@@ -322,7 +319,7 @@ performstep <- function(sl, i, j) {
     reverse <- c(i, i.linkedto) # Reverse single-swap
   } else if ((i.linkedto > i) && (j.linkedto < j)) { # Double-swap
     slnew <- add.link.gl(add.link.gl(sl, i, j, conflict="overwrite"),
-                         i.linkedto, j.linkedto, conflict="error")
+                         j.linkedto, i.linkedto, conflict="error")
     reverse <- c(i, i.linkedto)
   } else { # Catch-all
     stop("Unexpected error")

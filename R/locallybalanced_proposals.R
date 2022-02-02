@@ -18,7 +18,7 @@ draw.Z.locbal.lastfile <- function(cmpdata, sl, m, u, aBM, bBM, blocksize=NULL) 
   jblock <- blocks$jblock
 
   # Calculate proposal probabilities
-  probs <- calc.locbal.props.lastfile(iblock, jblock, cmpdata, sl, m, u, aBM, bBM)
+  probs <- calc.locbal.probs.lastfile(iblock, jblock, cmpdata, sl, m, u, aBM, bBM)
 
   # Pick proposal
   i.index <- sample(length(iblock), 1, prob=rowSums(probs))
@@ -34,7 +34,7 @@ draw.Z.locbal.lastfile <- function(cmpdata, sl, m, u, aBM, bBM, blocksize=NULL) 
   revj.index <- which(jblock == revj)
 
   # Calculate back-step probabilities
-  reverseprobs <- calc.locbal.props.lastfile(iblock, jblock, cmpdata, slprop, m, u, aBM, bBM)
+  reverseprobs <- calc.locbal.probs.lastfile(iblock, jblock, cmpdata, slprop, m, u, aBM, bBM)
 
   # M-H acceptance step
   log.alpha <- (
@@ -56,5 +56,28 @@ draw.Z.locbal.lastfile <- function(cmpdata, sl, m, u, aBM, bBM, blocksize=NULL) 
 # Calculate a matrix with proposal probabilities according to the locally
 # balanced proposal weighting
 calc.locbal.probs.lastfile <- function(iblock, jblock, cmpdata, sl, m, u, aBM, bBM) {
-  matrix(1, nrow=length(iblock), ncol=length(jblock))
+  logprobs <- matrix(0, nrow=length(iblock), ncol=length(jblock))
+
+  # Calculate (value proportional to) log posterior for each step and normalize
+  # by the log posterior at the current state
+  for (i.index in seq_along(iblock)) {
+    for (j.index in seq_along(jblock)) {
+      i <- iblock[i.index]
+      j <- jblock[j.index]
+      slprop <- performstep(sl, i, j)$state
+      logprobs[i.index, j.index] <- (
+        calc.log.lkl.lastfile(cmpdata, m, u, slprop) +
+        log.Zprior(slprop, aBM, bBM, vec="last")
+      )
+    }
+  }
+  logprobs <- logprobs - (
+    calc.log.lkl.lastfile(cmpdata, m, u, sl) +
+    log.Zprior(sl, aBM, bBM, vec="last")
+  )
+
+  # Bring out of log scale, use Barker weights function, normalize
+  probs <- exp(logprobs)
+  probs <- probs / (1 + probs)
+  return(probs / sum(probs))
 }
