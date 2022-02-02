@@ -107,7 +107,7 @@ PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, bloc
     pprb.index.save[iter] <- pprb.index.curr
 
     # Sample Zk, the latest Z vector using LB proposals
-    slcurr <- draw.Z.locbal.lastfile(cmpdata[[length(nfiles) - 1]], slcurr, mcurr, ucurr,
+    slcurr <- draw.Z.locbal.lastfile(cmpdata[[length(files) - 1]], slcurr, mcurr, ucurr,
                                      state$priors$aBM, state$priors$bBM, blocksize=blocksize)
     Zsave[,iter] <- savestate(slcurr)
   }

@@ -303,7 +303,7 @@ disag.counts.lastfile <- function(cmpdata, sl) {
     if (sum(pairidx) > 0) {
       leftrecords <- links$record1[pairidx]
       rightrecords <- links$record2[pairidx]
-      rows <- rightrecords * n1 + leftrecords
+      rows <- (rightrecords - 1) * n1 + leftrecords
       match.count <- colSums(cmpdata[[f]]$comparisons[rows,,drop=F])
     } else {
       match.count <- rep(0, sum(cmpdata[[f]]$nDisagLevs))

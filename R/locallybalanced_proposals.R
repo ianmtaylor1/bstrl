@@ -1,9 +1,60 @@
 
+# Perform a locally balanced proposal step for the last file's links.
+# Parameters:
+#   cmpdata = list of k-1 comparison data objects, comparing each of the first
+#     k-1 files with the kth file. This is the last element in the triangular
+#     list-of-lists format for all comparison data.
+#   m,u = current parameter values
+#   sl = streaminglinks object defining current link state
+#   aBM,bBM = prior parameters for link vectors
+#   blocksize = blocksize for reduced complexity
+# Returns:
+#   a new state of streaming link object: different by a local step if proposal
+#   was accepted, the same if proposal was rejected
 draw.Z.locbal.lastfile <- function(cmpdata, sl, m, u, aBM, bBM, blocksize=NULL) {
   # Create blocks
+  blocks <- createblocks(sl, file = nfiles(sl), blocksize = blocksize)
+  iblock <- blocks$iblock
+  jblock <- blocks$jblock
+
   # Calculate proposal probabilities
+  probs <- calc.locbal.props.lastfile(iblock, jblock, cmpdata, sl, m, u, aBM, bBM)
+
   # Pick proposal
+  i.index <- sample(length(iblock), 1, prob=rowSums(probs))
+  i <- iblock[i.index]
+  j.index <- sample(length(jblock), 1, prob=probs[i.index,])
+  j <- jblock[j.index]
+  tmp <- performstep(sl, i, j)
+  slprop <- tmp$state
+  reverse <- tmp$reverse
+  revi <- reverse[1]
+  revj <- reverse[2]
+  revi.index <- which(iblock == revi)
+  revj.index <- which(jblock == revj)
+
   # Calculate back-step probabilities
+  reverseprobs <- calc.locbal.props.lastfile(iblock, jblock, cmpdata, slprop, m, u, aBM, bBM)
+
   # M-H acceptance step
-  sl # TODO: stub
+  log.alpha <- (
+    calc.log.lkl.lastfile(cmpdata, m, u, slprop) -
+    calc.log.lkl.lastfile(cmpdata, m, u, sl) +
+    log.Zprior(slprop, aBM, bBM, vec="last") -
+    log.Zprior(sl, aBM, bBM, vec="last") +
+    log(reverseprobs[revi.index, revj.index]) -
+    log(probs[i.index, j.index])
+  )
+  if (log(runif(1)) < log.alpha) {
+    return(slprop)
+  } else {
+    return(sl)
+  }
+}
+
+
+# Calculate a matrix with proposal probabilities according to the locally
+# balanced proposal weighting
+calc.locbal.probs.lastfile <- function(iblock, jblock, cmpdata, sl, m, u, aBM, bBM) {
+  matrix(1, nrow=length(iblock), ncol=length(jblock))
 }
