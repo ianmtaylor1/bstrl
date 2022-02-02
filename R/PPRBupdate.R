@@ -1,4 +1,27 @@
 
+#' Perform a PPRB update of record linkage with a new file
+#'
+#' @param state Existing record linkage state. Returned by either bipartiteRL,
+#'   PPRBupdate, or SMCMCupdate.
+#' @param newfile A data.frame representing the new file: one row per record
+#' @param flds Names of fields in the new file to use for comparison. Only used
+#'   if no global field names were specified in bipartiteRL initially.
+#' @param nIter Number of iterations for which to run the PPRB sampler. By
+#'   default, this is the same as the number of samples present in 'state'.
+#' @param burn Number of initial iterations to discard. The total number of
+#'   samples returned is nIter - burn.
+#' @param blocksize Size of blocks to use for locally balanced proposals.
+#'   Default performs unblocked locally balanced proposals.
+#' @param threestep Whether to perform three Gibbs sampling steps per iteration,
+#'   with past Z's updated with PPRB, m and u updated with full conditionals,
+#'   and the current Z updated with locally balanced proposals. If false, a two
+#'   step Gibbs sampler is used where past Z's, m and u are updated together
+#'   using PPRB and the current Z is updated with locally balanced proposals
+#' @param seed Random seed to set at the beginning of the MCMC run
+#'
+#' @return An object of class 'bstrlstate' containing posterior samples and
+#'   necessary metadata for passing to future streaming updates.
+#'
 #' @export
 PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, blocksize = NULL,
                        threestep = T, seed=0) {
