@@ -6,38 +6,7 @@
 
 # Draw m and u from their full conditional distributions.
 # Parameters:
-#   cmpdata - a list of comparison data objects. There are k-1 total objects
-#             in the list. The first compares file 1 to file k, and so on, until
-#             the last which compares file k-1 to file k. All objects should
-#             therefore have equal n2 values.
-#   Z, Z2 - current values of the parameters Z and Z2
-#   a, b - prior hyperparameters for the distributions of m and u, respectively.
-#          See ?BRL::BRL for explanation
-#   m.prev.pars - additions to hyperparameters for m from matches between
-#          previous files. These are computed in a post-processing step of the
-#          samples of Z, and can just be passed directly here.
-#   u.prev.pars - same as m.prev.pars, but for u.
-#   trace - whether to do link tracing.
-# Return:
-#   A list with two elements, m and u, which contain the fc sampled m and u.
-r_m_u_fc <- function(cmpdata, Z, Z2,
-                     a, b, m.prev.pars, u.prev.pars, trace=FALSE) {
-  # 1. Create the additions to m and u hyperparameters derived from links with
-  # the newest (third) file.
-  counts <- disag.counts(cmpdata, Z, Z2, do.trace=trace)
-  m.new.pars <- counts$match
-  u.new.pars <- counts$nonmatch
-  # 2. combine a, m.prev.pars and new m pars to sample m
-  m <- rdirichlet.multi(alpha=m.new.pars + m.prev.pars + a, groups=cmpdata[[1]]$nDisagLevs)
-  # 3. combine b, u.prev.pars and new u pars to sample u
-  u <- rdirichlet.multi(alpha=u.new.pars + u.prev.pars + b, groups=cmpdata[[1]]$nDisagLevs)
-  # 4. Put into list and return
-  return(list(m=m, u=u))
-}
-
-# Draw m and u from their full conditional distributions.
-# Parameters:
-#   cmpdata - a list of comparison data objects. There are k-1 total objects
+#   lastfilecmps - a list of comparison data objects. There are k-1 total objects
 #             in the list. The first compares file 1 to file k, and so on, until
 #             the last which compares file k-1 to file k. All objects should
 #             therefore have equal n2 values.
@@ -48,50 +17,45 @@ r_m_u_fc <- function(cmpdata, Z, Z2,
 #          previous files. These are computed in a post-processing step of the
 #          samples of Z, and can just be passed directly here. Provides the
 #          contribution of the comparisons between all k-1 previous files, i.e.
-#          comparisons not included in cmpdata.
+#          comparisons not included in lastfilecmps.
 #   u.prev.pars - same as m.prev.pars, but for u.
-#   trace - whether to do link tracing.
 # Return:
 #   A list with two elements, m and u, which contain the fc sampled m and u.
-r_m_u_fc_pprb <- function(cmpdata, sl, a, b, m.prev.pars, u.prev.pars) {
+r_m_u_fc_pprb <- function(lastfilecmps, sl, a, b, m.prev.pars, u.prev.pars) {
   # 1. Determine the contribution of the latest file's comparison data to the
   # full conditional distribution
-  counts <- disag.counts.lastfile(cmpdata, sl)
+  counts <- disag.counts.lastfile(lastfilecmps, sl)
   m.new.pars <- counts$match
   u.new.pars <- counts$nonmatch
   # 2. combine a, m.prev.pars and new m pars to sample m
-  m <- rdirichlet.multi(alpha=m.new.pars + m.prev.pars + a, groups=cmpdata[[1]]$nDisagLevs)
+  m <- rdirichlet.multi(alpha=m.new.pars + m.prev.pars + a, groups=lastfilecmps[[1]]$nDisagLevs)
   # 3. combine b, u.prev.pars and new u pars to sample u
-  u <- rdirichlet.multi(alpha=u.new.pars + u.prev.pars + b, groups=cmpdata[[1]]$nDisagLevs)
+  u <- rdirichlet.multi(alpha=u.new.pars + u.prev.pars + b, groups=lastfilecmps[[1]]$nDisagLevs)
   # 4. Put into list and return
   return(list(m=m, u=u))
 }
 
-# Draw m and u from their full conditional distributions in SMCMC context.
-# Assumes cmpdata is a list of two lists: first, the cmpdata between files 1 and 2
-# Next the cmpdata between files 1 and 3, and 2 and 3. This format could be expanded
-# for multiple files.
-# This file also assumes link tracing is occurring
-r_m_u_fc_smcmc <- function(cmpdata, Z, Z2, a, b, fastcomp=FALSE) {
-  if (fastcomp) {
-    # Tally disagreement counts with individual lookup method
-    tmp <- disag.counts.smcmc.fast(cmpdata, Z, Z2)
-    m.pars <- tmp$match
-    u.pars <- tmp$nonmatch
-  } else {
-    # Tally disagreement counts.
-    tmp <- disag.counts(cmpdata[[1]], c(), Z, do.trace=TRUE)
-    m.pars <- tmp$match
-    u.pars <- tmp$nonmatch
-    tmp <- disag.counts(cmpdata[[2]], Z, Z2, do.trace=TRUE)
-    m.pars <- m.pars + tmp$match
-    u.pars <- u.pars + tmp$nonmatch
-  }
-  # DRaw m and u from dirichlet distributions
-  m <- rdirichlet.multi(alpha = m.pars + a, groups = cmpdata[[1]][[1]]$nDisagLevs)
-  u <- rdirichlet.multi(alpha = u.pars + b, groups = cmpdata[[1]][[1]]$nDisagLevs)
-  # Return both as a list
-  list(m=m, u=u)
+# Draw m and u from their full conditional distributions.
+# Parameters:
+#   cmpdata - a list of lists of comparison data objects. (Standard triangular
+#             comparison data format.)
+#   sl - streaminglinks object defining current state of links between files.
+#   a, b - prior hyperparameters for the distributions of m and u, respectively.
+#          See ?BRL::BRL for explanation
+# Return:
+#   A list with two elements, m and u, which contain the fc sampled m and u.
+r_m_u_fc_smcmc <- function(cmpdata, sl, a, b) {
+  # 1. Determine the contribution of the latest file's comparison data to the
+  # full conditional distribution
+  counts <- disag.counts.allfiles(cmpdata, sl)
+  m.new.pars <- counts$match
+  u.new.pars <- counts$nonmatch
+  # 2. combine a, m.prev.pars and new m pars to sample m
+  m <- rdirichlet.multi(alpha=m.new.pars + a, groups=cmpdata[[1]][[1]]$nDisagLevs)
+  # 3. combine b, u.prev.pars and new u pars to sample u
+  u <- rdirichlet.multi(alpha=u.new.pars + b, groups=cmpdata[[1]][[1]]$nDisagLevs)
+  # 4. Put into list and return
+  return(list(m=m, u=u))
 }
 
 ################################################################################
