@@ -94,8 +94,12 @@ SMCMCupdate <- function(state, newfile, flds=NULL, nIter.jumping=5, nIter.transi
       }
     }
 
+    # Calculate summary statistics of comparisons for potential use later in
+    # PPRB (done here to take advantage of parallelization)
+    tmp <- disag.counts.allfiles(cmpdata, slcurr)
+
     # Return a list of the ending values
-    list(m=mcurr, u=ucurr, sl=slcurr)
+    list(m=mcurr, u=ucurr, sl=slcurr, m.fc.pars=tmp$match, u.fc.pars=tmp$nonmatch)
   }
   if (cores > 1) {
     parallel::stopCluster(cl)
@@ -105,10 +109,14 @@ SMCMCupdate <- function(state, newfile, flds=NULL, nIter.jumping=5, nIter.transi
   msamples <- matrix(NA, nrow=nrow(state$m), ncol=ensemblesize)
   usamples <- matrix(NA, nrow=nrow(state$u), ncol=ensemblesize)
   Zsamples <- matrix(NA, nrow=length(savestate(samplist[[1]]$sl)), ncol=ensemblesize)
+  m.fc.pars <- matrix(0, nrow=nrow(state$m), ncol=ensemblesize)
+  u.fc.pars <- matrix(0, nrow=nrow(state$u), ncol=ensemblesize)
   for (s in seq_len(ensemblesize)) {
     msamples[,s] <- samplist[[s]]$m
     usamples[,s] <- samplist[[s]]$u
     Zsamples[,s] <- savestate(samplist[[s]]$sl)
+    m.fc.pars[,s] <- samplist[[s]]$m.fc.pars
+    u.fc.pars[,s] <- samplist[[s]]$u.fc.pars
   }
 
   # Construct and return the new link state
@@ -120,7 +128,9 @@ SMCMCupdate <- function(state, newfile, flds=NULL, nIter.jumping=5, nIter.transi
       files = files,
       comparisons = cmpdata,
       priors = state$priors,
-      cmpdetails = cmpdetails
+      cmpdetails = cmpdetails,
+      m.fc.pars = m.fc.pars,
+      u.fc.pars = u.fc.pars
     ),
     class = "bstrlstate"
   )
