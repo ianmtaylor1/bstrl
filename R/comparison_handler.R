@@ -88,7 +88,7 @@ disag.counts.tailfiles <- function(cmpdata, sl, startfile) {
   tot.match.count <- tot.nonmatch.count <- 0
 
   for (f in seq(startfile, nfiles(sl))) {
-    tmp <- disag.counts.onefile(cmpdata[[f - 1]])
+    tmp <- disag.counts.onefile(cmpdata[[f - 1]], sl)
     tot.match.count <- tot.match.count + tmp$match
     tot.nonmatch.count <- tot.nonmatch.count + tmp$nonmatch
   }

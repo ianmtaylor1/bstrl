@@ -19,14 +19,14 @@ calc.log.lkl.lastfile <- function(lastfilecmps, m, u, sl) {
 
 calc.log.lkl.tailfiles <- function(cmpdata, m, u, sl, startfile) {
   # Calculate the disagreement level counts
-  counts <- disag.counts.tailfiles(lastfilecmps, sl, startfile)
+  counts <- disag.counts.tailfiles(cmpdata, sl, startfile)
   # The log likelihood is these counts combined with log m and log u
   return(sum(counts$match * log(m)) + sum(counts$nonmatch * log(u)))
 }
 
 calc.log.lkl.allfiles <- function(cmpdata, m, u, sl) {
   # Calculate the disagreement level counts
-  counts <- disag.counts.allfiles(lastfilecmps, sl)
+  counts <- disag.counts.allfiles(cmpdata, sl)
   # The log likelihood is these counts combined with log m and log u
   return(sum(counts$match * log(m)) + sum(counts$nonmatch * log(u)))
 }
