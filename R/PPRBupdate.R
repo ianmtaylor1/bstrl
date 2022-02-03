@@ -81,7 +81,7 @@ PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, bloc
     pprb.index.prop <- sample(ncol(state$Z), 1)
     if (threestep) {
       # Sample m and u from full conditional
-      tmp <- r_m_u_fc_pprb(cmpdata[[length(files) - 1]], slcurr, state$priors$a, state$priors$b,
+      tmp <- r_m_u_fc_pprb(newcmps, slcurr, state$priors$a, state$priors$b,
                            state$m.fc.pars[,pprb.index.curr], state$u.fc.pars[,pprb.index.curr])
       mcurr <- tmp$m
       ucurr <- tmp$u
@@ -89,8 +89,8 @@ PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, bloc
       slprop <- swapprefix(slcurr, state$Z[,pprb.index.prop], conflict = "null")
       if (!is.null(slprop)) { # Check for impossible proposals
         log.alpha <- (
-          calc.log.lkl.lastfile(cmpdata[[length(files) - 1]], mcurr, ucurr, slprop) -
-          calc.log.lkl.lastfile(cmpdata[[length(files) - 1]], mcurr, ucurr, slcurr) +
+          calc.log.lkl.lastfile(newcmps, mcurr, ucurr, slprop) -
+          calc.log.lkl.lastfile(newcmps, mcurr, ucurr, slcurr) +
           log.Zprior(slprop, state$priors$aBM, state$priors$bBM, vec="last") -
           log.Zprior(slcurr, state$priors$aBM, state$priors$bBM, vec="last") +
           ddirichlet.multi(mcurr, state$m.fc.pars[,pprb.index.prop] + state$priors$a, nDisagLevs, log=T) +
@@ -111,8 +111,8 @@ PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, bloc
       uprop <- state$u[,pprb.index.prop]
       if (!is.null(slprop)) { # Check for impossible proposals
         log.alpha <- (
-          calc.log.lkl.lastfile(cmpdata[[length(files) - 1]], mprop, uprop, slprop) -
-          calc.log.lkl.lastfile(cmpdata[[length(files) - 1]], mcurr, ucurr, slcurr) +
+          calc.log.lkl.lastfile(newcmps, mprop, uprop, slprop) -
+          calc.log.lkl.lastfile(newcmps, mcurr, ucurr, slcurr) +
           log.Zprior(slprop, state$priors$aBM, state$priors$bBM, vec="last") -
           log.Zprior(slcurr, state$priors$aBM, state$priors$bBM, vec="last")
         )
@@ -130,7 +130,7 @@ PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, bloc
     pprb.index.save[iter] <- pprb.index.curr
 
     # Sample Zk, the latest Z vector using LB proposals
-    slcurr <- draw.Z.locbal.lastfile(cmpdata[[length(files) - 1]], slcurr, mcurr, ucurr,
+    slcurr <- draw.Z.locbal.lastfile(newcmps, slcurr, mcurr, ucurr,
                                      state$priors$aBM, state$priors$bBM, blocksize=blocksize)
     Zsave[,iter] <- savestate(slcurr)
   }
@@ -139,7 +139,7 @@ PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, bloc
   m.fc.pars <- matrix(0, nrow=nrow(msave), ncol=nIter)
   u.fc.pars <- matrix(0, nrow=nrow(msave), ncol=nIter)
   for (i in 1:nIter) {
-    tmp <- disag.counts.lastfile(cmpdata[[length(files) - 1]], streaminglinks(filesizes, Zsave[,i]))
+    tmp <- disag.counts.lastfile(newcmps, streaminglinks(filesizes, Zsave[,i]))
     m.fc.pars[,i] <- tmp$match + state$m.fc.pars[,pprb.index.save[i]]
     u.fc.pars[,i] <- tmp$nonmatch + state$u.fc.pars[,pprb.index.save[i]]
   }
