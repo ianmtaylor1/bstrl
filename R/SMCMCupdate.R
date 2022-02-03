@@ -1,6 +1,6 @@
 
 #' @export
-SMCMCupdate <- function(state, newfile, flds=NULL, nIter.jumping, nIter.transition,
+SMCMCupdate <- function(state, newfile, flds=NULL, nIter.jumping=5, nIter.transition=10,
                         cores=1, proposals.jumping=c("component", "LB"),
                         proposals.transition=c("LB", "component"), blocksize=NULL,
                         seed=0) { # Future additions: directratio and fastmu?
@@ -83,7 +83,9 @@ SMCMCupdate <- function(state, newfile, flds=NULL, nIter.jumping, nIter.transiti
 
       for (f in seq(2, length(files))) {
         if (proposals.jumping == "LB") {
-          # TODO: locally balanced transition kernel proposals
+          slcurr <- draw.Z.locbal(f, cmpdata, slcurr, mcurr, ucurr,
+                                  state$priors$aBM, state$priors$bBM,
+                                  blocksize=blocksize)
         } else if (proposals.jumping == "component") {
           # TODO: componentwise transition kernel proposals
         }
@@ -108,16 +110,15 @@ SMCMCupdate <- function(state, newfile, flds=NULL, nIter.jumping, nIter.transiti
   }
 
   # Construct and return the new link state
-  iterfilter <- setdiff(seq_len(nIter), seq_len(burn))
   structure(
     list(
-      Z = Zsamples[,iterfilter,drop=F],
-      m = msamples[,iterfilter,drop=F],
-      u = usamples[,iterfilter,drop=F],
+      Z = Zsamples,
+      m = msamples,
+      u = usamples,
       files = files,
       comparisons = cmpdata,
       priors = state$priors,
-      cmpdetails = cmpdetails,
+      cmpdetails = cmpdetails
     ),
     class = "bstrlstate"
   )
