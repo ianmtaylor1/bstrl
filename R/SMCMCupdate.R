@@ -70,7 +70,8 @@ SMCMCupdate <- function(state, newfile, flds=NULL, nIter.jumping=5, nIter.transi
                                          state$priors$aBM, state$priors$bBM,
                                          blocksize=blocksize)
       } else if (proposals.jumping == "component") {
-        # TODO: componentwise jumping kernel proposals
+        slcurr <- draw.Z.componentwise(length(filesizes), cmpdata, slcurr, mcurr,
+                                       ucurr, state$priors$aBM, state$priors$bBM)
       }
     }
 
@@ -87,7 +88,8 @@ SMCMCupdate <- function(state, newfile, flds=NULL, nIter.jumping=5, nIter.transi
                                   state$priors$aBM, state$priors$bBM,
                                   blocksize=blocksize)
         } else if (proposals.jumping == "component") {
-          # TODO: componentwise transition kernel proposals
+          slcurr <- draw.Z.componentwise(f, cmpdata, slcurr, mcurr, ucurr,
+                                         state$priors$aBM, state$priors$bBM)
         }
       }
     }
