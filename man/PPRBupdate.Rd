@@ -12,7 +12,8 @@ PPRBupdate(
   burn = 0,
   blocksize = NULL,
   threestep = T,
-  seed = 0
+  seed = 0,
+  refresh = 0.1
 )
 }
 \arguments{
@@ -40,6 +41,11 @@ step Gibbs sampler is used where past Z's, m and u are updated together
 using PPRB and the current Z is updated with locally balanced proposals}
 
 \item{seed}{Random seed to set at the beginning of the MCMC run}
+
+\item{refresh}{How often to output an update including the iteration number
+and percent complete. If refresh >= 1, taken as a number of iterations
+between messages (rounded). If 0 < refresh < 1, taken as the proportion of
+nIter. If refresh == 0, no messages are displayed.}
 }
 \value{
 An object of class 'bstrlstate' containing posterior samples and

@@ -3,3 +3,4 @@
 export(PPRBupdate)
 export(SMCMCupdate)
 export(bipartiteRL)
+export(multifileRL)

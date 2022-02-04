@@ -18,14 +18,26 @@
 #'   step Gibbs sampler is used where past Z's, m and u are updated together
 #'   using PPRB and the current Z is updated with locally balanced proposals
 #' @param seed Random seed to set at the beginning of the MCMC run
+#' @param refresh How often to output an update including the iteration number
+#'   and percent complete. If refresh >= 1, taken as a number of iterations
+#'   between messages (rounded). If 0 < refresh < 1, taken as the proportion of
+#'   nIter. If refresh == 0, no messages are displayed.
 #'
 #' @return An object of class 'bstrlstate' containing posterior samples and
 #'   necessary metadata for passing to future streaming updates.
 #'
 #' @export
 PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, blocksize = NULL,
-                       threestep = T, seed=0) {
+                       threestep = T, seed=0, refresh=0.1) {
   set.seed(seed)
+
+  if (is.null(refresh)) {
+    refresh <- 0
+  } else if ((0 < refresh) && (refresh < 1)) {
+    refresh <- ceiling(refresh * nIter)
+  } else {
+    refresh <- round(refresh)
+  }
 
   # Create and append new comparison data, building up the triangular
   # list-of-lists format
@@ -133,6 +145,15 @@ PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, bloc
     slcurr <- draw.Z.locbal.lastfile(newcmps, slcurr, mcurr, ucurr,
                                      state$priors$aBM, state$priors$bBM, blocksize=blocksize)
     Zsave[,iter] <- savestate(slcurr)
+
+    # Update messages, if desired
+    if ((refresh > 0) && (iter %% refresh == 0)) {
+      message(
+        iter, "/", nIter,
+        " [", round(100*iter/nIter), "%]",
+        if (iter <= burn) " (burn)" else ""
+      )
+    }
   }
 
   # Store updated summary statistics of comparisons for use later

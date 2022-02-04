@@ -15,27 +15,41 @@
 #' @param blocksize What blocksize to use for locally balanced proposals. By
 #'   default, LB proposals are not blocked
 #' @param seed Random seed to set at beginning of MCMC run
+#' @param refresh How often to output an update including the iteration number
+#'   and percent complete. If refresh >= 1, taken as a number of iterations
+#'   between messages (rounded). If 0 < refresh < 1, taken as the proportion of
+#'   nIter. If refresh == 0, no messages are displayed.
 #'
 #' @return An object of class "bstrlstate"
 #'
 #' @export
 multifileRL <- function(files, flds=NULL, types=NULL, breaks=c(0,.25,.5),
                         nIter=1000, burn=round(nIter*.1), a=1, b=1, aBM=1, bBM=1,
-                        proposals=c("component", "LB"), blocksize=NULL, seed=0) {
+                        proposals=c("component", "LB"), blocksize=NULL, seed=0,
+                        refresh=0.1) {
   stopifnot(length(files) >= 3)
   proposals <- match.arg(proposals)
+  set.seed(seed)
+
+  if (is.null(refresh)) {
+    refresh <- 0
+  } else if ((0 < refresh) && (refresh < 1)) {
+    refresh <- ceiling(refresh * nIter)
+  } else {
+    refresh <- round(refresh)
+  }
 
   # Create comparison data from the list of files
   `%do%` <- foreach::`%do%`
   cmpdata <- foreach::foreach(j=seq(2, length(files))) %do% {
     foreach::foreach(i=seq_len(j-1)) %do% {
-      compareRecords(files[i], files[j], flds=flds, types=types, breaks=breaks)
+      compareRecords(files[[i]], files[[j]], flds=flds, types=types, breaks=breaks)
     }
   }
 
   filesizes <- rep(0, length(files))
   for (f in seq_along(files)) {
-    filesizes[f] <- nrow(files[f])
+    filesizes[f] <- nrow(files[[f]])
   }
 
   # Metadata for storing in result
@@ -55,7 +69,7 @@ multifileRL <- function(files, flds=NULL, types=NULL, breaks=c(0,.25,.5),
     mcurr <- tmp$m
     ucurr <- tmp$u
 
-    for (f in seq_along(files)) {
+    for (f in seq(2, length(files))) {
       if (proposals == "component") {
         slcurr <- draw.Z.componentwise(f, cmpdata, slcurr, mcurr, ucurr, aBM, bBM)
       } else if (proposals == "LB") {
@@ -67,6 +81,15 @@ multifileRL <- function(files, flds=NULL, types=NULL, breaks=c(0,.25,.5),
     msave[,iter] <- mcurr
     usave[,iter] <- ucurr
     Zsave[,iter] <- savestate(slcurr)
+
+    # Update messages, if desired
+    if ((refresh > 0) && (iter %% refresh == 0)) {
+      message(
+        iter, "/", nIter,
+        " [", round(100*iter/nIter), "%]",
+        if (iter <= burn) " (burn)" else ""
+      )
+    }
   }
 
   # Post-process samples into summary statistics for m and u full conditionals
@@ -93,5 +116,4 @@ multifileRL <- function(files, flds=NULL, types=NULL, breaks=c(0,.25,.5),
     ),
     class = "bstrlstate"
   )
-
 }
