@@ -1,0 +1,97 @@
+
+#' Perform multifile record linkage via Gibbs sampling "from scratch"
+#'
+#' @param files A list of files
+#' @param flds Vector of names of the fields on which to compare the records in
+#'   each file
+#' @param types Types of comparisons to use for each field
+#' @param breaks Breaks to use for Levenshtein distance on string fields
+#' @param nIter,burn MCMC run length parameters. The returned number of samples
+#'   is nIter - burn.
+#' @param a,b Prior parameters for m and u, respectively.
+#' @param aBM,bBM Prior parameters for beta-linkage prior.
+#' @param proposals Which kind of full conditional proposals to use for the link
+#'   vectors.
+#' @param blocksize What blocksize to use for locally balanced proposals. By
+#'   default, LB proposals are not blocked
+#' @param seed Random seed to set at beginning of MCMC run
+#'
+#' @return An object of class "bstrlstate"
+#'
+#' @export
+multifileRL <- function(files, flds=NULL, types=NULL, breaks=c(0,.25,.5),
+                        nIter=1000, burn=round(nIter*.1), a=1, b=1, aBM=1, bBM=1,
+                        proposals=c("component", "LB"), blocksize=NULL, seed=0) {
+  stopifnot(length(files) >= 3)
+  proposals <- match.arg(proposals)
+
+  # Create comparison data from the list of files
+  `%do%` <- foreach::`%do%`
+  cmpdata <- foreach::foreach(j=seq(2, length(files))) %do% {
+    foreach::foreach(i=seq_len(j-1)) %do% {
+      compareRecords(files[i], files[j], flds=flds, types=types, breaks=breaks)
+    }
+  }
+
+  filesizes <- rep(0, length(files))
+  for (f in seq_along(files)) {
+    filesizes[f] <- nrow(files[f])
+  }
+
+  # Metadata for storing in result
+  priors <- list(a=a, b=b, aBM=aBM, bBM=bBM)
+  cmpdetails <- list(fldsglobal=flds, types=types, breaks=breaks,
+                     flds=rep(list(NULL), length(files)))
+
+  # Initial state and save arrays
+  slcurr <- streaminglinks(filesizes)
+
+  msave <- usave <- matrix(NA, nrow=sum(cmpdata[[1]][[1]]$nDisagLevs), ncol=nIter)
+  Zsave <- matrix(NA, nrow=length(savestate(slcurr)), ncol=nIter)
+
+  # Perform gibbs sampling
+  for (iter in seq_len(nIter)) {
+    tmp <- r_m_u_fc_smcmc(cmpdata, slcurr, a, b)
+    mcurr <- tmp$m
+    ucurr <- tmp$u
+
+    for (f in seq_along(files)) {
+      if (proposals == "component") {
+        slcurr <- draw.Z.componentwise(f, cmpdata, slcurr, mcurr, ucurr, aBM, bBM)
+      } else if (proposals == "LB") {
+        slcurr <- draw.Z.locbal(f, cmpdata, slcurr, mcurr, ucurr, aBM, bBM,
+                                blocksize=blocksize)
+      }
+    }
+
+    msave[,iter] <- mcurr
+    usave[,iter] <- ucurr
+    Zsave[,iter] <- savestate(slcurr)
+  }
+
+  # Post-process samples into summary statistics for m and u full conditionals
+  m.fc.pars <- u.fc.pars <- matrix(NA, nrow=nrow(msave), ncol=nIter)
+  for (s in seq_len(nIter)) {
+    tmp <- disag.counts.allfiles(cmpdata, streaminglinks(filesizes, Zsave[,s]))
+    m.fc.pars[,s] <- tmp$match
+    u.fc.pars[,s] <- tmp$nonmatch
+  }
+
+  # Burn and pack into result
+  iterfilter <- setdiff(seq_len(nIter), seq_len(burn))
+  structure(
+    list(
+      m = msave[,iterfilter, drop=F],
+      u = usave[,iterfilter, drop=F],
+      Z = Zsave[,iterfilter, drop=F],
+      files = files,
+      comparisons = cmpdata,
+      cmpdetails = cmpdetails,
+      priors = priors,
+      m.fc.pars = m.fc.pars[,iterfilter, drop=F],
+      u.fc.pars = u.fc.pars[,iterfilter, drop=F]
+    ),
+    class = "bstrlstate"
+  )
+
+}
