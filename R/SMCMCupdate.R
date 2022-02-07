@@ -1,4 +1,28 @@
 
+#' Perform an SMCMC update of record linkage with a new file
+#'
+#' @param state Existing record linkage state. Returned by either bipartiteRL,
+#'   PPRBupdate, SMCMCupdate, or multifileRL. This is used as the ensemble of
+#'   samples in SMCMC update
+#' @param newfile A data.frame representing the new file: one row per record
+#' @param flds Names of fields in the new file to use for comparison. Only used
+#'   if no global field names were specified in bipartiteRL initially.
+#' @param nIter.jumping,nIter.transition Number of iterations to use in the
+#'   jumping kernel and transition kernel, respectively, for each ensemble
+#'   sample.
+#' @param cores Number of cores to use for parallel execution. If cores == 1,
+#'   update is run sequentially. A cluster is created using
+#'   parallel::makeCluster().
+#' @param proposals.jumping,proposals.transition Which kernel to use for Z
+#'   updates in the jumping and transition kernels, respectively.
+#' @param blocksize Size of blocks to use for locally balanced proposals.
+#'   Default performs unblocked locally balanced proposals.
+#' @param seed Random seed to set at the beginning of the MCMC run. This is
+#'   ignored if cores > 1.
+#'
+#' @return An object of class 'bstrlstate' containing posterior samples and
+#'   necessary metadata for passing to future streaming updates.
+#'
 #' @export
 SMCMCupdate <- function(state, newfile, flds=NULL, nIter.jumping=5, nIter.transition=10,
                         cores=1, proposals.jumping=c("component", "LB"),
