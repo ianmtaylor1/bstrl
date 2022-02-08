@@ -79,6 +79,8 @@ SMCMCupdate <- function(state, newfile, flds=NULL, nIter.jumping=5, nIter.transi
   }
   `%dopar%` <- foreach::`%dopar%`
 
+  samplingstart <- Sys.time() # Start the clock to time sampling
+
   # Now do the SMCMC update on each member of the ensemble
   samplist <- foreach::foreach(s=seq_len(ensemblesize), .inorder=TRUE) %dopar% {
     # Initial values
@@ -125,6 +127,9 @@ SMCMCupdate <- function(state, newfile, flds=NULL, nIter.jumping=5, nIter.transi
     # Return a list of the ending values
     list(m=mcurr, u=ucurr, sl=slcurr, m.fc.pars=tmp$match, u.fc.pars=tmp$nonmatch)
   }
+
+  samplingend <- Sys.time() # Stop the clock
+
   if (cores > 1) {
     parallel::stopCluster(cl)
   }
@@ -154,7 +159,10 @@ SMCMCupdate <- function(state, newfile, flds=NULL, nIter.jumping=5, nIter.transi
       priors = state$priors,
       cmpdetails = cmpdetails,
       m.fc.pars = m.fc.pars,
-      u.fc.pars = u.fc.pars
+      u.fc.pars = u.fc.pars,
+      diagnostics = list(
+        samplingtime = as.double(samplingend - samplingstart, units="secs")
+      )
     ),
     class = "bstrlstate"
   )

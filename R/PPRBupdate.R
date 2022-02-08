@@ -81,11 +81,14 @@ PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, bloc
   mcurr <- state$m[,pprb.index.curr]
   ucurr <- state$u[,pprb.index.curr]
 
-  # Initialize matrices to save new posterior samples
+  # Initialize matrices to save new posterior samples and other quantities
   msave <- matrix(NA, nrow=nrow(state$m), ncol=nIter)
   usave <- matrix(NA, nrow=nrow(state$u), ncol=nIter)
   Zsave <- matrix(NA, nrow=length(savestate(slcurr)), ncol=nIter)
   pprb.index.save <- rep(NA, nIter)
+  pprb.accepted <- rep(FALSE, nIter)
+
+  samplingstart <- Sys.time() # Start the clock to time sampling
 
   # Main PPRB process
   for (iter in seq_len(nIter)) {
@@ -114,6 +117,7 @@ PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, bloc
         if (log(runif(1)) < log.alpha) {
           slcurr <- slprop
           pprb.index.curr <- pprb.index.prop
+          pprb.accepted[iter] <- TRUE
         }
       }
     } else { # two step
@@ -134,6 +138,7 @@ PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, bloc
           ucurr <- uprop
           slcurr <- slprop
           pprb.index.curr <- pprb.index.prop
+          pprb.accepted[iter] <- T
         }
       }
     }
@@ -156,6 +161,8 @@ PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, bloc
     }
   }
 
+  samplingend <- Sys.time() # Stop the clock
+
   # Store updated summary statistics of comparisons for use later
   m.fc.pars <- matrix(0, nrow=nrow(msave), ncol=nIter)
   u.fc.pars <- matrix(0, nrow=nrow(msave), ncol=nIter)
@@ -177,7 +184,11 @@ PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, bloc
       priors = state$priors,
       cmpdetails = cmpdetails,
       m.fc.pars = m.fc.pars[,iterfilter,drop=F],
-      u.fc.pars = u.fc.pars[,iterfilter,drop=F]
+      u.fc.pars = u.fc.pars[,iterfilter,drop=F],
+      diagnostics = list(
+        samplingtime = as.double(samplingend - samplingstart, units="secs"),
+        pprb.accepted = pprb.accepted[iterfilter]
+      )
     ),
     class = "bstrlstate"
   )

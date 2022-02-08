@@ -63,6 +63,8 @@ multifileRL <- function(files, flds=NULL, types=NULL, breaks=c(0,.25,.5),
   msave <- usave <- matrix(NA, nrow=sum(cmpdata[[1]][[1]]$nDisagLevs), ncol=nIter)
   Zsave <- matrix(NA, nrow=length(savestate(slcurr)), ncol=nIter)
 
+  samplingstart <- Sys.time() # Start the clock to time sampling
+
   # Perform gibbs sampling
   for (iter in seq_len(nIter)) {
     tmp <- r_m_u_fc_smcmc(cmpdata, slcurr, a, b)
@@ -92,6 +94,8 @@ multifileRL <- function(files, flds=NULL, types=NULL, breaks=c(0,.25,.5),
     }
   }
 
+  samplingend <- Sys.time() # Stop the clock
+
   # Post-process samples into summary statistics for m and u full conditionals
   m.fc.pars <- u.fc.pars <- matrix(NA, nrow=nrow(msave), ncol=nIter)
   for (s in seq_len(nIter)) {
@@ -112,7 +116,10 @@ multifileRL <- function(files, flds=NULL, types=NULL, breaks=c(0,.25,.5),
       cmpdetails = cmpdetails,
       priors = priors,
       m.fc.pars = m.fc.pars[,iterfilter, drop=F],
-      u.fc.pars = u.fc.pars[,iterfilter, drop=F]
+      u.fc.pars = u.fc.pars[,iterfilter, drop=F],
+      diagnostics = list(
+        samplingtime = as.double(samplingend - samplingstart, units="secs")
+      )
     ),
     class = "bstrlstate"
   )
