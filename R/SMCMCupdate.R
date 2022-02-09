@@ -109,11 +109,11 @@ SMCMCupdate <- function(state, newfile, flds=NULL, nIter.jumping=5, nIter.transi
       ucurr <- tmp$u
 
       for (f in seq(2, length(files))) {
-        if (proposals.jumping == "LB") {
+        if (proposals.transition == "LB") {
           slcurr <- draw.Z.locbal(f, cmpdata, slcurr, mcurr, ucurr,
                                   state$priors$aBM, state$priors$bBM,
                                   blocksize=blocksize)
-        } else if (proposals.jumping == "component") {
+        } else if (proposals.transition == "component") {
           slcurr <- draw.Z.componentwise(f, cmpdata, slcurr, mcurr, ucurr,
                                          state$priors$aBM, state$priors$bBM)
         }
