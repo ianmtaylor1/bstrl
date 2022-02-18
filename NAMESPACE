@@ -3,5 +3,8 @@
 export(PPRBupdate)
 export(SMCMCupdate)
 export(bipartiteRL)
+export(extractlinks)
 export(multifileRL)
+export(precision)
+export(recall)
 export(thinsamples)
