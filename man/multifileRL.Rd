@@ -18,7 +18,8 @@ multifileRL(
   proposals = c("component", "LB"),
   blocksize = NULL,
   seed = 0,
-  refresh = 0.1
+  refresh = 0.1,
+  maxtime = Inf
 )
 }
 \arguments{
@@ -50,6 +51,10 @@ default, LB proposals are not blocked}
 and percent complete. If refresh >= 1, taken as a number of iterations
 between messages (rounded). If 0 < refresh < 1, taken as the proportion of
 nIter. If refresh == 0, no messages are displayed.}
+
+\item{maxtime}{Amount of time, in seconds, after which the sampler will
+terminate with however many samples it has produced up to that point. The
+sample matrix columns for any unproduced samples will be filled with NAs}
 }
 \value{
 An object of class "bstrlstate"

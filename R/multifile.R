@@ -19,6 +19,9 @@
 #'   and percent complete. If refresh >= 1, taken as a number of iterations
 #'   between messages (rounded). If 0 < refresh < 1, taken as the proportion of
 #'   nIter. If refresh == 0, no messages are displayed.
+#' @param maxtime Amount of time, in seconds, after which the sampler will
+#'   terminate with however many samples it has produced up to that point. The
+#'   sample matrix columns for any unproduced samples will be filled with NAs
 #'
 #' @return An object of class "bstrlstate"
 #'
@@ -26,7 +29,7 @@
 multifileRL <- function(files, flds=NULL, types=NULL, breaks=c(0,.25,.5),
                         nIter=1000, burn=round(nIter*.1), a=1, b=1, aBM=1, bBM=1,
                         proposals=c("component", "LB"), blocksize=NULL, seed=0,
-                        refresh=0.1) {
+                        refresh=0.1, maxtime=Inf) {
   stopifnot(length(files) >= 3)
   proposals <- match.arg(proposals)
   set.seed(seed)
@@ -92,6 +95,11 @@ multifileRL <- function(files, flds=NULL, types=NULL, breaks=c(0,.25,.5),
         if (iter <= burn) " (burn)" else ""
       )
     }
+
+    # Should we break out of sampling for exceeding time?
+    if (as.double(Sys.time() - samplingstart, units="secs") > maxtime) {
+      break
+    }
   }
 
   samplingend <- Sys.time() # Stop the clock
@@ -99,9 +107,11 @@ multifileRL <- function(files, flds=NULL, types=NULL, breaks=c(0,.25,.5),
   # Post-process samples into summary statistics for m and u full conditionals
   m.fc.pars <- u.fc.pars <- matrix(NA, nrow=nrow(msave), ncol=nIter)
   for (s in seq_len(nIter)) {
-    tmp <- disag.counts.allfiles(cmpdata, streaminglinks(filesizes, Zsave[,s]))
-    m.fc.pars[,s] <- tmp$match
-    u.fc.pars[,s] <- tmp$nonmatch
+    if (!any(is.na(Zsave[,s]))) { # Only do this if the sampler reached this iteration
+      tmp <- disag.counts.allfiles(cmpdata, streaminglinks(filesizes, Zsave[,s]))
+      m.fc.pars[,s] <- tmp$match
+      u.fc.pars[,s] <- tmp$nonmatch
+    }
   }
 
   # Burn and pack into result
