@@ -69,6 +69,7 @@ multifileRL <- function(files, flds=NULL, types=NULL, breaks=c(0,.25,.5),
   samplingstart <- Sys.time() # Start the clock to time sampling
 
   # Perform gibbs sampling
+  completed <- T
   for (iter in seq_len(nIter)) {
     tmp <- r_m_u_fc_smcmc(cmpdata, slcurr, a, b)
     mcurr <- tmp$m
@@ -98,24 +99,52 @@ multifileRL <- function(files, flds=NULL, types=NULL, breaks=c(0,.25,.5),
 
     # Should we break out of sampling for exceeding time?
     if (as.double(Sys.time() - samplingstart, units="secs") > maxtime) {
+      completed <- F
       break
     }
   }
 
   samplingend <- Sys.time() # Stop the clock
 
-  # Post-process samples into summary statistics for m and u full conditionals
-  m.fc.pars <- u.fc.pars <- matrix(NA, nrow=nrow(msave), ncol=nIter)
-  for (s in seq_len(nIter)) {
-    if (!any(is.na(Zsave[,s]))) { # Only do this if the sampler reached this iteration
-      tmp <- disag.counts.allfiles(cmpdata, streaminglinks(filesizes, Zsave[,s]))
-      m.fc.pars[,s] <- tmp$match
-      u.fc.pars[,s] <- tmp$nonmatch
-    }
+  # Make note of how many iterations we actually reached
+  if (!completed) {
+    maxiter <- iter
+  } else {
+    maxiter <- nIter
   }
 
-  # Burn and pack into result
-  iterfilter <- setdiff(seq_len(nIter), seq_len(burn))
+  # Post-process samples into summary statistics for m and u full conditionals
+  m.fc.pars <- u.fc.pars <- matrix(NA, nrow=nrow(msave), ncol=nIter)
+  for (s in seq_len(maxiter)) {
+    tmp <- disag.counts.allfiles(cmpdata, streaminglinks(filesizes, Zsave[,s]))
+    m.fc.pars[,s] <- tmp$match
+    u.fc.pars[,s] <- tmp$nonmatch
+  }
+
+  # Create diagnostics and filters to burn
+  diagnostics <- list(
+    completed = completed,
+    samplingtime = as.double(samplingend - samplingstart, units="secs")
+  )
+  if (completed) {
+    # If we finished, burn as usual and include normal diagnostics
+    iterfilter <- setdiff(seq_len(nIter), seq_len(burn))
+    continue <- NULL
+  } else {
+    # If we didn't finish, don't burn yet and include info necessary for
+    # resuming later
+    iterfilter <- seq_len(nIter)
+    continue <- list(
+      maxiter = maxiter,
+      needtoburn = burn,
+      endingseed = .Random.seed,
+      a = a, b = b,
+      aBM = aBM, bBM = bBM,
+      proposals = proposals,
+      blocksize = blocksize
+    )
+  }
+  # Burn and package results into final structure
   structure(
     list(
       m = msave[,iterfilter, drop=F],
@@ -127,9 +156,8 @@ multifileRL <- function(files, flds=NULL, types=NULL, breaks=c(0,.25,.5),
       priors = priors,
       m.fc.pars = m.fc.pars[,iterfilter, drop=F],
       u.fc.pars = u.fc.pars[,iterfilter, drop=F],
-      diagnostics = list(
-        samplingtime = as.double(samplingend - samplingstart, units="secs")
-      )
+      diagnostics = diagnostics,
+      continue = continue
     ),
     class = "bstrlstate"
   )
