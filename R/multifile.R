@@ -30,7 +30,7 @@ multifileRL <- function(files, flds=NULL, types=NULL, breaks=c(0,.25,.5),
                         nIter=1000, burn=round(nIter*.1), a=1, b=1, aBM=1, bBM=1,
                         proposals=c("component", "LB"), blocksize=NULL, seed=0,
                         refresh=0.1, maxtime=Inf) {
-  stopifnot(length(files) >= 3)
+  stopifnot(length(files) >= 2)
   proposals <- match.arg(proposals)
   set.seed(seed)
 
