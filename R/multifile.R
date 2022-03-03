@@ -138,8 +138,6 @@ multifileRL <- function(files, flds=NULL, types=NULL, breaks=c(0,.25,.5),
       maxiter = maxiter,
       needtoburn = burn,
       endingseed = .Random.seed,
-      a = a, b = b,
-      aBM = aBM, bBM = bBM,
       proposals = proposals,
       blocksize = blocksize
     )
