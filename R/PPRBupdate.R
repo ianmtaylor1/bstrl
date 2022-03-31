@@ -88,7 +88,7 @@ PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, bloc
   pprb.index.save <- rep(NA, nIter)
   pprb.accepted <- rep(FALSE, nIter)
 
-  samplingstart <- Sys.time() # Start the clock to time sampling
+  samplingstarttime <- burnendtime <- Sys.time() # Start the clock to time sampling
 
   # Main PPRB process
   for (iter in seq_len(nIter)) {
@@ -159,9 +159,14 @@ PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, bloc
         if (iter <= burn) " (burn)" else ""
       )
     }
+
+    # Log the end of the burn-in phase
+    if (iter == burn) {
+      burnendtime <- Sys.time()
+    }
   }
 
-  samplingend <- Sys.time() # Stop the clock
+  samplingendtime <- Sys.time() # Stop the clock
 
   # Store updated summary statistics of comparisons for use later
   m.fc.pars <- matrix(0, nrow=nrow(msave), ncol=nIter)
@@ -186,7 +191,8 @@ PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, bloc
       m.fc.pars = m.fc.pars[,iterfilter,drop=F],
       u.fc.pars = u.fc.pars[,iterfilter,drop=F],
       diagnostics = list(
-        samplingtime = as.double(samplingend - samplingstart, units="secs"),
+        burntime = as.double(burnendtime - samplingstarttime, units="secs"),
+        samplingtime = as.double(samplingendtime - burnendtime, units="secs"),
         pprb.accepted = pprb.accepted[iterfilter]
       )
     ),

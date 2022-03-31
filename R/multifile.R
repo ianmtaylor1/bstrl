@@ -66,7 +66,7 @@ multifileRL <- function(files, flds=NULL, types=NULL, breaks=c(0,.25,.5),
   msave <- usave <- matrix(NA, nrow=sum(cmpdata[[1]][[1]]$nDisagLevs), ncol=nIter)
   Zsave <- matrix(NA, nrow=length(savestate(slcurr)), ncol=nIter)
 
-  samplingstart <- Sys.time() # Start the clock to time sampling
+  samplingstarttime <- burnendtime <- Sys.time() # Start the clock to time sampling
 
   # Perform gibbs sampling
   completed <- T
@@ -97,6 +97,11 @@ multifileRL <- function(files, flds=NULL, types=NULL, breaks=c(0,.25,.5),
       )
     }
 
+    # Log the end of the burn-in phase
+    if (iter == burn) {
+      burnendtime <- Sys.time()
+    }
+
     # Should we break out of sampling for exceeding time?
     if (as.double(Sys.time() - samplingstart, units="secs") > maxtime) {
       completed <- F
@@ -104,7 +109,10 @@ multifileRL <- function(files, flds=NULL, types=NULL, breaks=c(0,.25,.5),
     }
   }
 
-  samplingend <- Sys.time() # Stop the clock
+  samplingendtime <- Sys.time() # Stop the clock
+  if (!completed) {
+    burnendtime <- samplingendtime
+  }
 
   # Make note of how many iterations we actually reached
   if (!completed) {
@@ -124,7 +132,8 @@ multifileRL <- function(files, flds=NULL, types=NULL, breaks=c(0,.25,.5),
   # Create diagnostics and filters to burn
   diagnostics <- list(
     completed = completed,
-    samplingtime = as.double(samplingend - samplingstart, units="secs")
+    burntime = as.double(burnendtime - samplingstarttime, units="secs"),
+    samplingtime = as.double(samplingendtime - burnendtime, units="secs")
   )
   if (completed) {
     # If we finished, burn as usual and include normal diagnostics
