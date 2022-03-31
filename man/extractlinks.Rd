@@ -5,10 +5,13 @@
 \title{Extract the links from a bstrlstate object into a list of streaminglinks
 objects.}
 \usage{
-extractlinks(state)
+extractlinks(state, unfinished = c("ignore", "warn", "fail"))
 }
 \arguments{
 \item{state}{A bstrlstate object returned by one of the main RL functions.}
+
+\item{unfinished}{What to do if passed an unfinished sampling state, e.g.
+from multifileRL. See details.}
 }
 \value{
 A list of streaminglinks objects, one per posterior sample contained
@@ -17,4 +20,15 @@ in 'state'.
 \description{
 Extract the links from a bstrlstate object into a list of streaminglinks
 objects.
+}
+\details{
+The function does one of three things when passed an unfinished
+sampling state, e.g. from multifileRL after time limit expired. For
+'ignore', the desired burn is performed and any remaining samples are
+discarded, returning only the number of completed post-burn samples. If
+the link state does not have any completed post-burn samples, an empty
+list is returned.
+If 'warn', the same action is performed as 'ignore' but a warning is
+issued. If 'fail', any unfinished link state will cause the function to
+fail.
 }
