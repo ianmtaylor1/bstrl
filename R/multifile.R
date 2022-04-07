@@ -103,7 +103,7 @@ multifileRL <- function(files, flds=NULL, types=NULL, breaks=c(0,.25,.5),
     }
 
     # Should we break out of sampling for exceeding time?
-    if (as.double(Sys.time() - samplingstart, units="secs") > maxtime) {
+    if (as.double(Sys.time() - samplingstarttime, units="secs") > maxtime) {
       completed <- F
       break
     }
