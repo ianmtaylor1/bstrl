@@ -7,8 +7,7 @@ these estimated links to be updated upon the arrival of each sequential file.
 
 ## Branches
 
-* 'master' contains the latest version of 3 file record linkage, using either Prior-Proposal-Recursive Bayes or Sequential Markov Chain Monte Carlo
-* 'streaming' contains refactoring for k > 3 file record linkage
+* 'master' contains the latest version of streaming record linkage, using either Prior-Proposal-Recursive Bayes or Sequential Markov Chain Monte Carlo
 * All other branches are dead ends or have been merged into 'master'
 
 ## Methods
