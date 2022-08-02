@@ -17,3 +17,10 @@ knitr::opts_chunk$set(
 ```{r setup}
 library(bstrl)
 ```
+
+We will be using the included data, `geco_30over_3err`, a simulated dataset with 7 files, 14 fields per file, known true identities, 30\% overlap between files, and 3 errors per duplicated record.
+
+```{r showdata}
+length(geco_30over_3err)
+head(geco_30over_3err[[1]])
+```
