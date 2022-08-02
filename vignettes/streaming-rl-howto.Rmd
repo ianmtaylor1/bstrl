@@ -24,3 +24,51 @@ We will be using the included data, `geco_30over_3err`, a simulated dataset with
 length(geco_30over_3err)
 head(geco_30over_3err[[1]])
 ```
+
+```{r preparecomparisons}
+# Names of the columns on which to perform linkage
+fieldnames <- c("given.name", "surname", "age", "occup", "extra1", "extra2", "extra3", "extra4", "extra5", "extra6")
+
+# How to compare each of the fields
+types <- c("lv", "lv", # First name and last name use normalized edit distance
+           "bi", "bi", "bi", "bi", "bi", "bi", "bi", "bi") # All others binary equal/unequal
+breaks <- c(0, 0.25, 0.5) # Break continuous difference measures into 4 levels using these split points
+
+```
+
+```{r multifile}
+# Link all three files from scratch
+res.threefile <- multifileRL(list(file1, file2, file3),
+                             flds = fieldnames, types = types, breaks = breaks,
+                             nIter = 1000, burn=100, # Number of iterations to run
+                             proposals = "LB", # Change to "LB" for faster iterations, slower convergence
+                             blockzize=50, # Blocking for locally balanced proposals
+                             seed = 0,
+                             refresh = 0.05) # Print progress every 5% of run.
+```
+
+```{r streaming}
+# Streaming linkage
+
+# First link the first two files
+res.twofile <- bipartiteRL(file1, file2,
+                           flds = fieldnames, types = types, breaks = breaks,
+                           nIter = 2000, burn = 1000,
+                           seed = 0)
+
+# PPRB update
+res.pprb <- PPRBupdate(res.twofile, file3, # Comparison details are stored with previous result
+                       nIter = 2000, burn = 1000,
+                       blocksize = 50, # LB proposals can be "blocked". Lower = faster iterations, slower convergence
+                       seed = 0,
+                       refresh = 0.05)
+
+# SMCMC update
+filtered <- thinsamples(res.twofile, 100) # Don't need 1000, 100 will do
+res.smcmc <- SMCMCupdate(filtered, file3,
+                         nIter.jumping=3, nIter.transition = 10,
+                         proposals.jumping="component", proposals.transition="component", #Either can be LB, but increase corresponding number of iterations
+                         cores = 1, # Increase for parallel execution
+                         blocksize = NULL) # Change to not null if either proposal is LB
+
+```
