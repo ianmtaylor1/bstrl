@@ -18,12 +18,18 @@ knitr::opts_chunk$set(
 library(bstrl)
 ```
 
-We will be using the included data, `geco_30over_3err`, a simulated dataset with 7 files, 14 fields per file, known true identities, 30\% overlap between files, and 3 errors per duplicated record.
+# Data
+
+We will be using the included data, `geco_small`, a small simulated dataset with 7 files, 14 fields per file, known true identities, and 3 errors per duplicated record. This variable contains a list of data frames, each of which represents a file with 10 records each.
 
 ```{r showdata}
-length(geco_30over_3err)
-head(geco_30over_3err[[1]])
+length(geco_small)
+head(geco_small[[1]])
 ```
+
+A larger version of this dataset is also included as `geco_30over_3err`. 
+
+To perform linkage, we first have to define the fields we will be using and their data types. For this example we will only use a subset of the available fields.
 
 ```{r preparecomparisons}
 # Names of the columns on which to perform linkage
@@ -36,39 +42,139 @@ breaks <- c(0, 0.25, 0.5) # Break continuous difference measures into 4 levels u
 
 ```
 
-```{r multifile}
-# Link all three files from scratch
-res.threefile <- multifileRL(list(file1, file2, file3),
-                             flds = fieldnames, types = types, breaks = breaks,
-                             nIter = 1000, burn=100, # Number of iterations to run
-                             proposals = "LB", # Change to "LB" for faster iterations, slower convergence
-                             blockzize=50, # Blocking for locally balanced proposals
-                             seed = 0,
-                             refresh = 0.05) # Print progress every 5% of run.
-```
+We will link using the fields `given.name`, `surname`, `age`, `occup`, and `extra1` through `extra6`. Given name and surname are compared using normalized Levenshtein edit distance, with breaks at 0, 0.25, and 0.5. In other words, exact equality is given its own level, then there are three levels for varying inequality. All other fields are compared in a binary fashion.
+
+# Streaming Record Linkage
+
+## Base two file linkage
+
+To perform streaming record linkage, we need an initial two-file linkage to use as a base for streaming updates. This is accomplished using the `bipartiteRL` function which outsources the task to the `BRL` package.
 
 ```{r streaming}
-# Streaming linkage
-
-# First link the first two files
-res.twofile <- bipartiteRL(file1, file2,
+res.twofile <- bipartiteRL(geco_small[[1]], geco_small[[2]],
                            flds = fieldnames, types = types, breaks = breaks,
-                           nIter = 2000, burn = 1000,
+                           nIter = 600, burn = 100,
                            seed = 0)
+```
 
-# PPRB update
-res.pprb <- PPRBupdate(res.twofile, file3, # Comparison details are stored with previous result
-                       nIter = 2000, burn = 1000,
-                       blocksize = 50, # LB proposals can be "blocked". Lower = faster iterations, slower convergence
+It is important to pass the comparison details we created earlier to this function as shown. These will be stored with the result and used in future streaming updates. Further information on function parameters can be found in the documentation by running `help(bipartiteRL)`.
+
+## PPRB updates
+
+To perform PPRB updates, pass an existing result object and a new data frame to the function `PPRBupdate`, along with parameters that define how the sampling should proceed.
+
+```{r pprbupdate}
+res.pprb3 <- PPRBupdate(res.twofile, geco_small[[3]], # Comparison details are stored with previous result
+                       nIter = 600, burn = 100,
                        seed = 0,
                        refresh = 0.05)
+res.pprb4 <- PPRBupdate(res.pprb3, geco_small[[4]], # Comparison details are stored with previous result
+                       nIter = 600, burn = 100,
+                       seed = 0,
+                       refresh = 0.05)
+```
 
-# SMCMC update
-filtered <- thinsamples(res.twofile, 100) # Don't need 1000, 100 will do
-res.smcmc <- SMCMCupdate(filtered, file3,
-                         nIter.jumping=3, nIter.transition = 10,
+Further information on function parameters can be found in the documentation by running `help(PRPBupdate)`.
+
+## SMCMC updates
+
+To perform SMCMC updates, pass an existing result object and a new data frame to the function `SMCMCupdate`, along with parameters that define how the sampling should proceed.
+
+First, SMCMC can work with a smaller number of iterations than PPRB. To filter an existing result object by thinning every $n^{th}$ posterior sample, run the `thinsamples` function. SMCMC produces *independent* samples from the posterior, so filter to the number of independent samples that would be desired from the posterior distribution for estimating your parameters or quantities of interest.
+
+```{r filtersamples}
+filtered <- thinsamples(res.twofile, 100) # Don't need 500, 100 will do
+```
+
+The filtered sample pool can be passed to a streaming update in the same way as any result object.
+
+```{r smcmcupdate}
+res.smcmc3 <- SMCMCupdate(filtered, geco_small[[3]],
+                         nIter.jumping=2, nIter.transition = 8,
                          proposals.jumping="component", proposals.transition="component", #Either can be LB, but increase corresponding number of iterations
-                         cores = 1, # Increase for parallel execution
-                         blocksize = NULL) # Change to not null if either proposal is LB
+                         cores = 4) # Parallel execution
+res.smcmc4 <- SMCMCupdate(res.smcmc3, geco_small[[4]],
+                         nIter.jumping=2, nIter.transition = 8,
+                         proposals.jumping="component", proposals.transition="component", #Either can be LB, but increase corresponding number of iterations
+                         cores = 4) # Parallel execution
+```
 
+SMCMC uses two MCMC kernels, a jumping kernel and a transition kernel, which are performed on each member of the ensemble in parallel. The jumping kernel is used to initialize the links to the latest file, and the transition kernel is used to simultaneously update all parameters.
+
+This results in two differences to the function's paramters. Instead of a single `nIter` parameter, `SMCMCupdate` has two: `nIter.jumping` and `nIter.transition`. The function also has two parameters, `proposals.jumping` and `proposals.transition`, which define the update method for the link parameters. `nIter.jumping` can be relatively smaller than `nIter.transition`, since the transition kernel will continue to update links to the latest file. Both values must be larger if either proposal is set to "LB" - locally balanced proposals have slower mixing than component-wise.
+
+## Analyzing results
+
+Results objects are made up of a list containing posterior samples of each parameter.
+
+```{r resultsobject}
+names(res.pprb4)
+```
+
+The values of `Z`, `m`, and `u` are link parameters. They are stored as matrices where each column is a posterior sample and each row is a component of the vector-valued parameters. The value of `diagnostics` is used internally by some functions, and all other values store details necessary to perform streaming updates when further files arrive.
+
+```{r objectsizes}
+# All have 500 columns and different numbers of rows.
+dim(res.pprb4$Z)
+dim(res.pprb4$m)
+dim(res.pprb4$u)
+```
+
+The `Z` parameter contains posterior samples of links between records, so is the main parameter of interest in record linkage applications. 
+
+```{r examiningZ}
+# The first post-burn MCMC sample of Z
+Zexample <- res.pprb4$Z[,1]
+Zexample
+```
+
+The parameter $Z$ contains one value per record starting in file 2. The value at an index gives the record to which the corresponding record is linked. For example,
+
+```{r examplelink}
+Zexample[8]
+```
+
+indicates that the $8^{th}$ record in file 2 is linked to the $9^{th}$ record in file 1. These links can also lead to further links, such as 
+
+```{r examplecluster}
+Zexample[27]
+Zexample[8]
+```
+
+collectively defining a cluster of the $7^{th}$ record in file 4, the $8^{th}$ record in file 2 and the $9^{th}$ record in file 1.
+
+<!--This is unwieldy for an increasing number of files or for larger files, so functions to process these links are provided.-->
+
+# Method notes and caveats
+
+## Locally balanced proposals
+
+Locally balanced proposals are an alternate way for link vectors to be sampled by an MCMC. While component-wise proposals draw values from the full conditional distribution of each component of a link vector - essentially updating the link of each record in each file sequentially - locally balanced proposals perform an add, delete, or swap operation based on the target posterior probability. Locally balanced proposals sample by more intelligently moving through the space of possible links between records at the cost of slower mixing (because fewer links can be updated in any one iteration). Locally balanced proposals have another advantage in that they can be blocked. Blocking allows for a locally balanced proposal to only consider a small subset of records for its proposal, reducing the time required at the cost of even slower mixing.
+
+In streaming update functions such as `SMCMCupdate`, the `proposals.jumping` and `proposals.transition` parameters can instruct the sampler to use locally balanced proposals and the `blocksize` parameter can be used to enable blocking. Similar options are also available in the `multifileRL` function.
+
+## Mixing Streaming Updates
+
+Streaming updates can be mixed and matched. For example, file 3 can be incorporated using a PPRB update and file 4 can be incorporated using an SMCMC update. 
+
+## MCMC Iterations
+
+The number of MCMC iterations does not need to be the same in subsequent streaming updates. This is especially useful when alternating between SMCMC updates (which can function well with small ensembles) and PPRB updates (which can quickly produce large numbers of samples).
+
+## PPRB Sample Degredation
+
+As a filtering method, PPRB reduces the number of distinct values within its sample pool after repeated use. Eventually, this can lead to inaccurate estimates of quantities of interest as the pool has degraded too much. To couteract this, SMCMC updates can be occasionally used to refresh the diversity of available samples.
+
+# Non-streaming Multifile Record Linkage
+
+This package also provides the option to perform non-streaming, multi-file record linkage using a Gibbs sampler. This can be done using the `multifileRL` function. This is significantly slower than streaming record linkage and is only provided for educational purposes.
+
+```{r multifile}
+# Link three files from scratch, returning 500 posterior samples
+res.threefile <- multifileRL(geco_small[1:3],
+                             flds = fieldnames, types = types, breaks = breaks,
+                             nIter = 600, burn=100, # Number of iterations to run
+                             proposals = "comp", # Change to "LB" for faster iterations, slower convergence
+                             seed = 0,
+                             refresh = 0.05) # Print progress every 5% of run.
 ```

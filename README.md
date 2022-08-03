@@ -20,4 +20,10 @@ TBD
 
 ## Usage
 
-TBD
+To install, run
+
+```
+devtools::install_github("ianmtaylor1/bstrl", build_vignettes=TRUE)
+```
+
+then run `vignettes()` to find included documentation and how-to's.
