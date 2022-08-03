@@ -71,7 +71,17 @@ savestate <- function(sl) {
   sl$Z[seq(sl$ns[1] + 1, length(sl$Z))]
 }
 
-# Return True/False whether the two record are coreferent
+#' Return True/False whether the two record are coreferent
+#'
+#' @param sl A streaming link object
+#' @param file1,record1 The file number and record number of the first record
+#' @param file2,record2 The file number and record number of the second record.
+#'   Note that file2 must be greater than file1.
+#'
+#' @return A boolean value. True if these two records are linked within sl,
+#'   False otherwise.
+#'
+#' @export
 islinked <- function(sl, file1, record1, file2, record2) {
   stopifnot(file1 < file2)
   stopifnot(record1 <= sl$ns[file1], record1 >= 1)
@@ -97,7 +107,19 @@ islinked.gl <- function(sl, gidx1, gidx2) {
   return(linked)
 }
 
-# Return a list of all linked pairs (directly or transitively)
+#' Return a list of all linked pairs (directly or transitively)
+#'
+#' @param sl A streaming link object
+#' @param idx Whether to use global (default) or local indices
+#'
+#' @return A list with two (global) or four (local) members, definining linked
+#' pairs of records. If 'global' indices, these members are called 'idx1' and
+#' 'idx2', where corresponding entries are the global indices of matched pairs
+#' of records. If 'local' indices, these members are called 'file1', 'record1',
+#' 'file2', and 'record2', where corresponding entries are the file number and
+#' record number within the file of matched pairs of records.
+#'
+#' @export
 alllinks <- function(sl, idx=c("global", "local")) {
   idx <- match.arg(idx)
 

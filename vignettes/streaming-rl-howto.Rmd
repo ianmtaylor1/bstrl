@@ -143,7 +143,22 @@ Zexample[8]
 
 collectively defining a cluster of the $7^{th}$ record in file 4, the $8^{th}$ record in file 2 and the $9^{th}$ record in file 1.
 
-<!--This is unwieldy for an increasing number of files or for larger files, so functions to process these links are provided.-->
+This is unwieldy for an increasing number of files or for larger files, so functions to process these links are provided.
+
+```{r linkprocessing}
+# Create a list of length 500, where each element is one streaming link object
+# for each posterior sample.
+samples <- extractlinks(res.pprb4)
+
+# Are record 9 in file 1 and record 7 in file 4 linked in the first posterior sample?
+islinked(samples[[1]], file1=1, record1=9, file2=4, record2=7)
+
+# In what proportion of posterior samples are record 9 in file 1 and record 7 in file 4 linked?
+mean(sapply(samples, islinked, file1=1, record1=9, file2=4, record2=7))
+
+# In what proportion of posterior samples are record 8 in file 1 and record 1 in file 2 linked?
+mean(sapply(samples, islinked, file1=1, record1=8, file2=2, record2=1))
+```
 
 # Method notes and caveats
 

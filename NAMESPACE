@@ -2,8 +2,10 @@
 
 export(PPRBupdate)
 export(SMCMCupdate)
+export(alllinks)
 export(bipartiteRL)
 export(extractlinks)
+export(islinked)
 export(multifileRL)
 export(precision)
 export(recall)
