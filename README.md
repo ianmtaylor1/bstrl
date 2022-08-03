@@ -26,4 +26,4 @@ To install, run
 devtools::install_github("ianmtaylor1/bstrl", build_vignettes=TRUE)
 ```
 
-then run `vignettes()` to find included documentation and how-to's.
+then run `vignette()` to find included documentation and how-to's for this package.
