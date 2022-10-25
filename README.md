@@ -10,14 +10,6 @@ these estimated links to be updated upon the arrival of each sequential file.
 * 'master' contains the latest version of streaming record linkage, using either Prior-Proposal-Recursive Bayes or Sequential Markov Chain Monte Carlo
 * All other branches are dead ends or have been merged into 'master'
 
-## Methods
-
-TBD
-* Beta Record Linkage
-* Fellegi-Sunter model
-* Prior Proposal Recursive Bayes
-* Locally balanced proposals
-
 ## Usage
 
 To install, run
