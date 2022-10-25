@@ -51,7 +51,7 @@ draw.Z.locbal.lastfile <- function(lastfilecmps, sl, m, u, aBM, bBM, blocksize=N
     log(reverseprobs[revi.index, revj.index]) -
     log(probs[i.index, j.index])
   )
-  if (log(runif(1)) < log.alpha) {
+  if (log(stats::runif(1)) < log.alpha) {
     return(slprop)
   } else {
     return(sl)
@@ -139,7 +139,7 @@ draw.Z.locbal <- function(file, cmpdata, sl, m, u, aBM, bBM, blocksize=NULL) {
       log(reverseprobs[revi.index, revj.index]) -
       log(probs[i.index, j.index])
   )
-  if (log(runif(1)) < log.alpha) {
+  if (log(stats::runif(1)) < log.alpha) {
     return(slprop)
   } else {
     return(sl)

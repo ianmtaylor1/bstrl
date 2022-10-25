@@ -114,7 +114,7 @@ PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, bloc
           ddirichlet.multi(ucurr, state$u.fc.pars[,pprb.index.curr] + state$priors$b, nDisagLevs, log=T)
         )
 
-        if (log(runif(1)) < log.alpha) {
+        if (log(stats::runif(1)) < log.alpha) {
           slcurr <- slprop
           pprb.index.curr <- pprb.index.prop
           pprb.accepted[iter] <- TRUE
@@ -133,7 +133,7 @@ PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, bloc
           log.Zprior(slcurr, state$priors$aBM, state$priors$bBM, vec="last")
         )
 
-        if (log(runif(1)) < log.alpha) {
+        if (log(stats::runif(1)) < log.alpha) {
           mcurr <- mprop
           ucurr <- uprop
           slcurr <- slprop
