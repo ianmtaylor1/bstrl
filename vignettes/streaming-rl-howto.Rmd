@@ -92,11 +92,11 @@ The filtered sample pool can be passed to a streaming update in the same way as 
 res.smcmc3 <- SMCMCupdate(filtered, geco_small[[3]],
                          nIter.jumping=2, nIter.transition = 8,
                          proposals.jumping="component", proposals.transition="component", #Either can be LB, but increase corresponding number of iterations
-                         cores = 4) # Parallel execution
+                         cores = 2) # Parallel execution
 res.smcmc4 <- SMCMCupdate(res.smcmc3, geco_small[[4]],
                          nIter.jumping=2, nIter.transition = 8,
                          proposals.jumping="component", proposals.transition="component", #Either can be LB, but increase corresponding number of iterations
-                         cores = 4) # Parallel execution
+                         cores = 2) # Parallel execution
 ```
 
 SMCMC uses two MCMC kernels, a jumping kernel and a transition kernel, which are performed on each member of the ensemble in parallel. The jumping kernel is used to initialize the links to the latest file, and the transition kernel is used to simultaneously update all parameters.
