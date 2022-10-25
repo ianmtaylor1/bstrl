@@ -311,7 +311,7 @@ swapprefix <- function(sl, Zpre,
     if (conflict == "null") {
       return(NULL)
     } else if (conflict == "error") {
-      stop("Cannot link file", file1, "record", record1, "to file", file2, "record", record2)
+      stop("Cannot swap prefix.")
     }
   }
 
