@@ -15,7 +15,7 @@ Authors@R: c(
            role = c("aut", "cre"),
            email = "ian.taylor@colostate.edu")
     )
-Description: What the package does (one paragraph).
+Description: Perform record linkage on streaming files using recursive Bayesian updating.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
