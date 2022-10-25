@@ -96,6 +96,7 @@ extractlinks <- function(state, unfinished=c("warn", "ignore", "fail")) {
   }
 
   foreach::foreach(i = seq(burn + 1, maxiter)) %do% {
+    i <- get("i") # Terrible hack to suppress CRAN check notes
     streaminglinks(filesizes, state$Z[,i])
   }
 }

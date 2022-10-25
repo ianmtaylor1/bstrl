@@ -46,6 +46,7 @@ multifileRL <- function(files, flds=NULL, types=NULL, breaks=c(0,.25,.5),
   `%do%` <- foreach::`%do%`
   cmpdata <- foreach::foreach(j=seq(2, length(files))) %do% {
     foreach::foreach(i=seq_len(j-1)) %do% {
+      i <- get("i"); j <- get("j") # Terrible hack to suppress CRAN check notes
       compareRecords(files[[i]], files[[j]], flds=flds, types=types, breaks=breaks)
     }
   }
