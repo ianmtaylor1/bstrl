@@ -17,7 +17,7 @@ files of 200 records each. The columns in each file consist of two ID columns
 for validating links:
 }
 \details{
-\itemzize{
+\itemize{
 \item rec.id. Contains the entity number and duplicate number of each record. This is unique to a record.
 \item entity. Contains the entity number of which this record is a copy. Is identical for all records which are noisy duplicates of the same original.
 }
