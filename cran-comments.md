@@ -10,7 +10,7 @@ There were 3 NOTEs on various platforms:
 New submission
 Maintainer: 'Ian Taylor <ian.taylor@colostate.edu>'
 
-This note appeared on all platforms.
+This note appeared on all platforms. This is my first submission to CRAN.
 
 * checking for detritus in the temp directory ... NOTE
 Found the following files/directories:
