@@ -83,7 +83,7 @@ To perform SMCMC updates, pass an existing result object and a new data frame to
 First, SMCMC can work with a smaller number of iterations than PPRB. To filter an existing result object by thinning every $n^{th}$ posterior sample, run the `thinsamples` function. SMCMC produces *independent* samples from the posterior, so filter to the number of independent samples that would be desired from the posterior distribution for estimating your parameters or quantities of interest.
 
 ```{r filtersamples}
-filtered <- thinsamples(res.twofile, 100) # Don't need 500, 100 will do
+filtered <- thinsamples(res.twofile, 50) # Don't need 500, 50 for demonstration
 ```
 
 The filtered sample pool can be passed to a streaming update in the same way as any result object.
