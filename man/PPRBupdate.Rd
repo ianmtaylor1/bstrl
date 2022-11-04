@@ -11,7 +11,7 @@ PPRBupdate(
   nIter = NULL,
   burn = 0,
   blocksize = NULL,
-  threestep = T,
+  threestep = TRUE,
   seed = 0,
   refresh = 0.1
 )

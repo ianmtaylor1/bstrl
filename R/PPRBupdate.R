@@ -28,7 +28,7 @@
 #'
 #' @export
 PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, blocksize = NULL,
-                       threestep = T, seed=0, refresh=0.1) {
+                       threestep = TRUE, seed=0, refresh=0.1) {
   set.seed(seed)
 
   if (is.null(refresh)) {
