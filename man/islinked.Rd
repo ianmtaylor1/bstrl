@@ -21,3 +21,17 @@ False otherwise.
 \description{
 Return True/False whether the two record are coreferent
 }
+\examples{
+data(geco_small_result)
+samples <- extractlinks(geco_small_result)
+
+# Are record 9 in file 1 and record 7 in file 4 linked in the first posterior sample?
+islinked(samples[[1]], file1=1, record1=9, file2=4, record2=7)
+
+# In what proportion of posterior samples are record 9 in file 1 and record 7 in file 4 linked?
+mean(sapply(samples, islinked, file1=1, record1=9, file2=4, record2=7))
+
+# In what proportion of posterior samples are record 8 in file 1 and record 1 in file 2 linked?
+mean(sapply(samples, islinked, file1=1, record1=8, file2=2, record2=1))
+
+}

@@ -81,6 +81,19 @@ savestate <- function(sl) {
 #' @return A boolean value. True if these two records are linked within sl,
 #'   False otherwise.
 #'
+#' @examples
+#' data(geco_small_result)
+#' samples <- extractlinks(geco_small_result)
+#'
+#' # Are record 9 in file 1 and record 7 in file 4 linked in the first posterior sample?
+#' islinked(samples[[1]], file1=1, record1=9, file2=4, record2=7)
+#'
+#' # In what proportion of posterior samples are record 9 in file 1 and record 7 in file 4 linked?
+#' mean(sapply(samples, islinked, file1=1, record1=9, file2=4, record2=7))
+#'
+#' # In what proportion of posterior samples are record 8 in file 1 and record 1 in file 2 linked?
+#' mean(sapply(samples, islinked, file1=1, record1=8, file2=2, record2=1))
+#'
 #' @export
 islinked <- function(sl, file1, record1, file2, record2) {
   stopifnot(file1 < file2)
@@ -118,6 +131,13 @@ islinked.gl <- function(sl, gidx1, gidx2) {
 #' of records. If 'local' indices, these members are called 'file1', 'record1',
 #' 'file2', and 'record2', where corresponding entries are the file number and
 #' record number within the file of matched pairs of records.
+#'
+#' @examples
+#' data(geco_small_result)
+#' samples <- extractlinks(geco_small_result)
+#' # List all linked pairs of records in the 42nd posterior sample
+#' alllinks(samples[[42]], idx="global")
+#' alllinks(samples[[42]], idx="local")
 #'
 #' @export
 alllinks <- function(sl, idx=c("global", "local")) {

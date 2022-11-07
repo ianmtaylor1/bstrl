@@ -22,3 +22,11 @@ record number within the file of matched pairs of records.
 \description{
 Return a list of all linked pairs (directly or transitively)
 }
+\examples{
+data(geco_small_result)
+samples <- extractlinks(geco_small_result)
+# List all linked pairs of records in the 42nd posterior sample
+alllinks(samples[[42]], idx="global")
+alllinks(samples[[42]], idx="local")
+
+}
