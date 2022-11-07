@@ -101,7 +101,7 @@ res.smcmc4 <- SMCMCupdate(res.smcmc3, geco_small[[4]],
 
 SMCMC uses two MCMC kernels, a jumping kernel and a transition kernel, which are performed on each member of the ensemble in parallel. The jumping kernel is used to initialize the links to the latest file, and the transition kernel is used to simultaneously update all parameters.
 
-This results in two differences to the function's paramters. Instead of a single `nIter` parameter, `SMCMCupdate` has two: `nIter.jumping` and `nIter.transition`. The function also has two parameters, `proposals.jumping` and `proposals.transition`, which define the update method for the link parameters. `nIter.jumping` can be relatively smaller than `nIter.transition`, since the transition kernel will continue to update links to the latest file. Both values must be larger if either proposal is set to "LB" - locally balanced proposals have slower mixing than component-wise.
+This results in two differences to the function's parameters. Instead of a single `nIter` parameter, `SMCMCupdate` has two: `nIter.jumping` and `nIter.transition`. The function also has two parameters, `proposals.jumping` and `proposals.transition`, which define the update method for the link parameters. `nIter.jumping` can be relatively smaller than `nIter.transition`, since the transition kernel will continue to update links to the latest file. Both values must be larger if either proposal is set to "LB" - locally balanced proposals have slower mixing than component-wise.
 
 ## Analyzing results
 

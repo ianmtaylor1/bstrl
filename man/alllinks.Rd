@@ -12,7 +12,7 @@ alllinks(sl, idx = c("global", "local"))
 \item{idx}{Whether to use global (default) or local indices}
 }
 \value{
-A list with two (global) or four (local) members, definining linked
+A list with two (global) or four (local) members, defining linked
 pairs of records. If 'global' indices, these members are called 'idx1' and
 'idx2', where corresponding entries are the global indices of matched pairs
 of records. If 'local' indices, these members are called 'file1', 'record1',

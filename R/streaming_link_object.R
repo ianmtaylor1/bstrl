@@ -125,7 +125,7 @@ islinked.gl <- function(sl, gidx1, gidx2) {
 #' @param sl A streaming link object
 #' @param idx Whether to use global (default) or local indices
 #'
-#' @return A list with two (global) or four (local) members, definining linked
+#' @return A list with two (global) or four (local) members, defining linked
 #' pairs of records. If 'global' indices, these members are called 'idx1' and
 #' 'idx2', where corresponding entries are the global indices of matched pairs
 #' of records. If 'local' indices, these members are called 'file1', 'record1',
