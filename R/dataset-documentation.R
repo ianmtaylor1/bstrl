@@ -51,3 +51,15 @@
 #' @seealso geco_30over_3err
 #' @usage data(geco_small)
 "geco_small"
+
+#' Example linkage result object for small dataset
+#'
+#' This object is useful for examples and for testing code designed to process
+#' record linkage results. It is identical to the PPRB result obtained from 4
+#' files in the 'streaming-rl-howto' vignette included with this package.
+#'
+#' @format An object of class 'bstrlstate', as is returned by the streaming
+#'   update functions PPRBupdate, SMCMCupdate, multifileRL, or bipartiteRL.
+#' @seealso geco_small, PPRBupdate
+#' @usage data(geco_small_result)
+"geco_small_result"
