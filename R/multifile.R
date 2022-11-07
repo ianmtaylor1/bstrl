@@ -25,6 +25,24 @@
 #'
 #' @return An object of class "bstrlstate"
 #'
+#' @examples
+#' data(geco_small)
+#'
+#' # Names of the columns on which to perform linkage
+#' fieldnames <- c("given.name", "surname", "age", "occup", "extra1", "extra2", "extra3", "extra4", "extra5", "extra6")
+#'
+#' # How to compare each of the fields
+#' types <- c("lv", "lv", # First name and last name use normalized edit distance
+#'            "bi", "bi", "bi", "bi", "bi", "bi", "bi", "bi") # All others binary equal/unequal
+#' breaks <- c(0, 0.25, 0.5) # Break continuous difference measures into 4 levels using these split points
+#'
+#' # Three file linkage using first three files in example dataset
+#' multifile.result <- multifileRL(geco_small[1:3],
+#'                                 flds = fieldnames, types = types, breaks = breaks,
+#'                                 nIter = 2, burn = 1, # Very small run for example
+#'                                 proposals = "comp", # Change to "LB" for faster iterations, slower convergence
+#'                                 seed = 0)
+#'
 #' @export
 multifileRL <- function(files, flds=NULL, types=NULL, breaks=c(0,.25,.5),
                         nIter=1000, burn=round(nIter*.1), a=1, b=1, aBM=1, bBM=1,
