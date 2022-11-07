@@ -121,7 +121,6 @@ extractlinks <- function(state, unfinished=c("warn", "ignore", "fail")) {
 #' @return The precision of the estimated links.
 #'
 #' @examples
-#' \dontshow{
 #' data(geco_small)
 #'
 #' # Create the true links based on record entity ID's
@@ -141,7 +140,6 @@ extractlinks <- function(state, unfinished=c("warn", "ignore", "fail")) {
 #'   c(nrow(geco_small[[1]]), nrow(geco_small[[2]]), nrow(geco_small[[3]]), nrow(geco_small[[4]])),
 #'   c(true.Z1, true.Z2, true.Z3)
 #' )
-#' }
 #'
 #' data(geco_small_result)
 #' posterior <- extractlinks(geco_small_result)
@@ -168,7 +166,6 @@ precision <- function(sl.est, sl.true) {
 #' @return The recall of the estimated links.
 #'
 #' @examples
-#' \dontshow{
 #' data(geco_small)
 #'
 #' # Create the true links based on record entity ID's
@@ -188,7 +185,6 @@ precision <- function(sl.est, sl.true) {
 #'   c(nrow(geco_small[[1]]), nrow(geco_small[[2]]), nrow(geco_small[[3]]), nrow(geco_small[[4]])),
 #'   c(true.Z1, true.Z2, true.Z3)
 #' )
-#' }
 #'
 #' data(geco_small_result)
 #' posterior <- extractlinks(geco_small_result)

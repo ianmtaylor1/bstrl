@@ -18,7 +18,6 @@ The recall of the estimated links.
 Calculate the recall of estimated links relative to true links
 }
 \examples{
-\dontshow{
 data(geco_small)
 
 # Create the true links based on record entity ID's
@@ -38,7 +37,6 @@ sl.true <- bstrl:::streaminglinks(
   c(nrow(geco_small[[1]]), nrow(geco_small[[2]]), nrow(geco_small[[3]]), nrow(geco_small[[4]])),
   c(true.Z1, true.Z2, true.Z3)
 )
-}
 
 data(geco_small_result)
 posterior <- extractlinks(geco_small_result)
