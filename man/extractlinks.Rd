@@ -31,3 +31,11 @@ list is returned. If 'warn' (default), the same action is performed as
 'ignore' but a warning is issued. If 'fail', any unfinished link state will
 cause the function to fail.
 }
+\examples{
+data(geco_small_result)
+posterior <- extractlinks(geco_small_result, unfinished="fail")
+stopifnot(ncol(geco_small_result$Z) == length(posterior))
+class(posterior)
+class(posterior[[1]])
+
+}

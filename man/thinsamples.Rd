@@ -23,3 +23,9 @@ desired count remains.
 This is useful to do before an SMCMC update. SMCMC produces
 independent samples, so fewer are required to get the same quality estimates.
 }
+\examples{
+data(geco_small_result)
+filtered <- thinsamples(geco_small_result, 50)
+stopifnot(ncol(filtered$Z) == 50)
+
+}

@@ -17,6 +17,11 @@
 #'
 #' @return An object of class bstrlstate, containing count samples.
 #'
+#' @examples
+#' data(geco_small_result)
+#' filtered <- thinsamples(geco_small_result, 50)
+#' stopifnot(ncol(filtered$Z) == 50)
+#'
 #' @export
 thinsamples <- function(state, count) {
   N <- ncol(state$Z)
@@ -66,6 +71,13 @@ thinsamples <- function(state, count) {
 #' @return A list of streaminglinks objects, one per posterior sample contained
 #'   in 'state'.
 #'
+#' @examples
+#' data(geco_small_result)
+#' posterior <- extractlinks(geco_small_result, unfinished="fail")
+#' stopifnot(ncol(geco_small_result$Z) == length(posterior))
+#' class(posterior)
+#' class(posterior[[1]])
+#'
 #' @export
 extractlinks <- function(state, unfinished=c("warn", "ignore", "fail")) {
   unfinished <- match.arg(unfinished)
@@ -108,6 +120,35 @@ extractlinks <- function(state, unfinished=c("warn", "ignore", "fail")) {
 #'
 #' @return The precision of the estimated links.
 #'
+#' @examples
+#' \dontshow{
+#' data(geco_small)
+#'
+#' # Create the true links based on record entity ID's
+#' lastmatch <- function(x, table) {
+#'   tmp <- match(x, rev(table))
+#'   length(table) - tmp + 1
+#' }
+#' maketrueZ <- function(idk, idprev) {
+#'   Z <- lastmatch(idk, idprev)
+#'   Z[is.na(Z)] <- (length(idprev) + seq_along(idk))[is.na(Z)]
+#'   Z
+#' }
+#' true.Z1 <- maketrueZ(geco_small[[2]]$entity, geco_small[[1]]$entity)
+#' true.Z2 <- maketrueZ(geco_small[[3]]$entity, c(geco_small[[1]]$entity, geco_small[[2]]$entity))
+#' true.Z3 <- maketrueZ(geco_small[[4]]$entity, c(geco_small[[1]]$entity, geco_small[[2]]$entity, geco_small[[3]]$entity))
+#' sl.true <- bstrl:::streaminglinks(
+#'   c(nrow(geco_small[[1]]), nrow(geco_small[[2]]), nrow(geco_small[[3]]), nrow(geco_small[[4]])),
+#'   c(true.Z1, true.Z2, true.Z3)
+#' )
+#' }
+#'
+#' data(geco_small_result)
+#' posterior <- extractlinks(geco_small_result)
+#' # Compare one posterior sample to previously computed known truth
+#' class(sl.true)
+#' precision(posterior[[42]], sl.true)
+#'
 #' @export
 precision <- function(sl.est, sl.true) {
   estlinks <- alllinks(sl.est, idx="global")
@@ -125,6 +166,35 @@ precision <- function(sl.est, sl.true) {
 #' @param sl.true streaminglinks object representing true links
 #'
 #' @return The recall of the estimated links.
+#'
+#' @examples
+#' \dontshow{
+#' data(geco_small)
+#'
+#' # Create the true links based on record entity ID's
+#' lastmatch <- function(x, table) {
+#'   tmp <- match(x, rev(table))
+#'   length(table) - tmp + 1
+#' }
+#' maketrueZ <- function(idk, idprev) {
+#'   Z <- lastmatch(idk, idprev)
+#'   Z[is.na(Z)] <- (length(idprev) + seq_along(idk))[is.na(Z)]
+#'   Z
+#' }
+#' true.Z1 <- maketrueZ(geco_small[[2]]$entity, geco_small[[1]]$entity)
+#' true.Z2 <- maketrueZ(geco_small[[3]]$entity, c(geco_small[[1]]$entity, geco_small[[2]]$entity))
+#' true.Z3 <- maketrueZ(geco_small[[4]]$entity, c(geco_small[[1]]$entity, geco_small[[2]]$entity, geco_small[[3]]$entity))
+#' sl.true <- bstrl:::streaminglinks(
+#'   c(nrow(geco_small[[1]]), nrow(geco_small[[2]]), nrow(geco_small[[3]]), nrow(geco_small[[4]])),
+#'   c(true.Z1, true.Z2, true.Z3)
+#' )
+#' }
+#'
+#' data(geco_small_result)
+#' posterior <- extractlinks(geco_small_result)
+#' # Compare one posterior sample to previously computed known truth
+#' class(sl.true)
+#' recall(posterior[[42]], sl.true)
 #'
 #' @export
 recall <- function(sl.est, sl.true) {

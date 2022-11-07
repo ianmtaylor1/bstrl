@@ -17,3 +17,33 @@ The precision of the estimated links.
 \description{
 Calculate the precision of estimated links relative to true links
 }
+\examples{
+\dontshow{
+data(geco_small)
+
+# Create the true links based on record entity ID's
+lastmatch <- function(x, table) {
+  tmp <- match(x, rev(table))
+  length(table) - tmp + 1
+}
+maketrueZ <- function(idk, idprev) {
+  Z <- lastmatch(idk, idprev)
+  Z[is.na(Z)] <- (length(idprev) + seq_along(idk))[is.na(Z)]
+  Z
+}
+true.Z1 <- maketrueZ(geco_small[[2]]$entity, geco_small[[1]]$entity)
+true.Z2 <- maketrueZ(geco_small[[3]]$entity, c(geco_small[[1]]$entity, geco_small[[2]]$entity))
+true.Z3 <- maketrueZ(geco_small[[4]]$entity, c(geco_small[[1]]$entity, geco_small[[2]]$entity, geco_small[[3]]$entity))
+sl.true <- bstrl:::streaminglinks(
+  c(nrow(geco_small[[1]]), nrow(geco_small[[2]]), nrow(geco_small[[3]]), nrow(geco_small[[4]])),
+  c(true.Z1, true.Z2, true.Z3)
+)
+}
+
+data(geco_small_result)
+posterior <- extractlinks(geco_small_result)
+# Compare one posterior sample to previously computed known truth
+class(sl.true)
+precision(posterior[[42]], sl.true)
+
+}
