@@ -29,9 +29,10 @@
 #'
 #' # Add fifth file to previous four-file link result
 #' filtered <- thinsamples(geco_small_result, 2) # Filter ensemble to 2 - very small for example
-#' file5 <- geco_small[[5]][seq_len(3),] # Smaller fifth file for example
-#' file5.result <- SMCMCupdate(filtered, file5,
-#'                             nIter.jumping=1, nIter.transition=1) # Very small run for example
+#' file5.result <- SMCMCupdate(filtered, geco_small[[5]],
+#'                             nIter.jumping=1, nIter.transition=1, # Very small run for example
+#'                             proposals.jumping="LB", proposals.transition="LB",
+#'                             blocksize=5)
 #'
 #' @export
 SMCMCupdate <- function(state, newfile, flds=NULL, nIter.jumping=5, nIter.transition=10,
