@@ -51,3 +51,14 @@ necessary metadata for passing to future streaming updates.
 \description{
 Perform an SMCMC update of record linkage with a new file
 }
+\examples{
+data(geco_small)
+data(geco_small_result)
+
+# Add fifth file to previous four-file link result
+filtered <- thinsamples(geco_small_result, 2) # Filter ensemble to 2 - very small for example
+file5 <- geco_small[[5]][seq_len(3),] # Smaller fifth file for example
+file5.result <- SMCMCupdate(filtered, file5,
+                            nIter.jumping=1, nIter.transition=1) # Very small run for example
+
+}

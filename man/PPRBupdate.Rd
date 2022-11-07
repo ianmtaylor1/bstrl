@@ -54,3 +54,12 @@ necessary metadata for passing to future streaming updates.
 \description{
 Perform a PPRB update of record linkage with a new file
 }
+\examples{
+data(geco_small)
+data(geco_small_result)
+
+# Add fifth file to previous four-file link result
+file5.result <- PPRBupdate(geco_small_result, geco_small[[5]],
+                           nIter=2, burn=1) # Very small run for example
+
+}

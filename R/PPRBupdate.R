@@ -26,6 +26,14 @@
 #' @return An object of class 'bstrlstate' containing posterior samples and
 #'   necessary metadata for passing to future streaming updates.
 #'
+#' @examples
+#' data(geco_small)
+#' data(geco_small_result)
+#'
+#' # Add fifth file to previous four-file link result
+#' file5.result <- PPRBupdate(geco_small_result, geco_small[[5]],
+#'                            nIter=2, burn=1) # Very small run for example
+#'
 #' @export
 PPRBupdate <- function(state, newfile, flds = NULL, nIter = NULL, burn = 0, blocksize = NULL,
                        threestep = TRUE, seed=0, refresh=0.1) {
