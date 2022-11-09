@@ -51,6 +51,65 @@ checkvalidZ <- function(Z) {
   return(TRUE)
 }
 
+#### Creating a streaming link object from entity id's in each file
+
+lastmatch <- function(x, table) {
+  tmp <- match(x, rev(table))
+  length(table) - tmp + 1
+}
+maketrueZ <- function(idk, idprev) {
+  Z <- lastmatch(idk, idprev)
+  Z[is.na(Z)] <- (length(idprev) + seq_along(idk))[is.na(Z)]
+  Z
+}
+
+#' Create a streaming link object from known record entity id's
+#'
+#' @param ... Vectors containing entity IDs of each record in each file.
+#'   Each parameter represents the records in a file. The values are an
+#'   entity ID for the records in that file. Two records having the same
+#'   entity ID are coreferent.
+#'
+#' @return A streaming link object with S3 class 'streaminglinks', defining the
+#'   links between records implied by the supplied entity IDs
+#'
+#' @examples
+#' data(geco_30over_3err)
+#'
+#' file1 <- geco_30over_3err[[1]]
+#' file2 <- geco_30over_3err[[2]]
+#' file3 <- geco_30over_3err[[3]]
+#' file4 <- geco_30over_3err[[4]]
+#'
+#' fromentities(file1$entity, file2$entity, file3$entity, file4$entity)
+#'
+#' @export
+fromentities <- function(...) {
+  entityids <- list(...)
+  # Must have at least two files
+  stopifnot(length(entityids) >= 2)
+
+  # Start with file size and Z for first file
+  ns <- c(length(entityids[[1]]))
+  Z <- seq_len(ns[1])
+
+  for (k in seq(2, length(entityids))) {
+    # Append file size to file sizes vector
+    ns <- c(ns, length(entityids[[k]]))
+
+    # Find Z for latest file and append to existing Z's
+    Zk <- maketrueZ(entityids[[k]], unlist(entityids[seq_len(k-1)]))
+    Z <- c(Z, Zk)
+  }
+
+  # Make sure lengths are okay
+  stopifnot(sum(ns) == length(unlist(entityids)))
+  stopifnot(sum(ns) == length(Z))
+
+  # Create and return object
+  streaminglinks(ns, Z)
+}
+
 #### Querying the link object
 
 # Return whether the streaming link object is valid: Z represents a valid
