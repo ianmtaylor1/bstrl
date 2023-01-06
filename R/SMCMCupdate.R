@@ -2,8 +2,8 @@
 #' Perform an SMCMC update of record linkage with a new file
 #'
 #' @param state Existing record linkage state. Returned by either bipartiteRL,
-#'   PPRBupdate, SMCMCupdate, or multifileRL. This is used as the ensemble of
-#'   samples in SMCMC update
+#'   PPRBupdate, SMCMCupdate, PRPBWTupdate, or multifileRL. This is used as the
+#'   ensemble of samples in SMCMC update
 #' @param newfile A data.frame representing the new file: one row per record
 #' @param flds Names of fields in the new file to use for comparison. Only used
 #'   if no global field names were specified in bipartiteRL initially.
@@ -62,6 +62,60 @@ SMCMCupdate <- function(state, newfile, flds=NULL, nIter.jumping=5, nIter.transi
   cmpdetails <- state$cmpdetails
   cmpdetails$flds <- c(cmpdetails$flds, list(flds))
 
+  # Initialize streaming link object. Unlinked to new file, randomly chosen
+  # value from existing state
+  filesizes <- rep(0, length(files))
+  for (i in seq_along(files)) {
+    filesizes[i] <- nrow(files[[i]])
+  }
+
+  # How big is the ensemble we are working with?
+  ensemblesize <- ncol(state$Z)
+
+  # Pre-append unlinked z vector for new file
+  newZ <- matrix(NA, nrow=nrow(state$Z)+filesizes[length(files)], ncol=ensemblesize)
+  for (s in seq_len(ensemblesize)) {
+    slcurr <- streaminglinks(filesizes)
+    slcurr <- swapprefix(slcurr, state$Z[,s], conflict="error")
+    newZ[,s] <- savestate(slcurr)
+  }
+
+  ensemble <- list(m=state$m, u=state$u, Z=newZ)
+
+  updated <- coreSMCMCupdate(ensemble, state$priors, files, cmpdata,
+                             nIter.jumping, nIter.transition, cores,
+                             proposals.jumping, proposals.transition,
+                             blocksize, seed)
+
+  # Construct and return the new link state
+  updated$files <- files
+  updated$comparisons <- cmpdata
+  updated$priors <- state$priors
+  updated$cmpdetails <- cmpdetails
+
+  return(updated)
+}
+
+# Function to perform the core SMCMC update, after file comparisons, and returning
+# partial info
+# The goal of this function is to be able to be used in SMCMCupdate as well as
+# PPRBWTupdate. Therefore it doesn't do any file comparisons, but just performs
+# the Jumping and Transition kernels.
+#
+# Most parameters are passed directly from the SMCMC function, where value
+# validation is done. Note these attributes for specific parameters:
+#  ensemble - a list. It only needs to contain the starting ensemble for m, u,
+#    and Z, but can just be the state passed to SMCMCupdate
+#
+coreSMCMCupdate <- function(ensemble, priors, files, cmpdata,
+                            nIter.jumping, nIter.transition,
+                            cores, proposals.jumping, proposals.transition,
+                            blocksize,
+                            seed) {
+
+  # Pull out comparisons with most recent file
+  newcmps <- cmpdata[[length(cmpdata)]]
+
   # Groupings for m and u
   nDisagLevs <- cmpdata[[1]][[1]]$nDisagLevs
 
@@ -73,7 +127,7 @@ SMCMCupdate <- function(state, newfile, flds=NULL, nIter.jumping=5, nIter.transi
   }
 
   # How big is the ensemble we are working with?
-  ensemblesize <- ncol(state$Z)
+  ensemblesize <- ncol(ensemble$Z)
 
   # Create cluster if necessary and register for parallel execution
   if (cores > 1) {
@@ -95,38 +149,37 @@ SMCMCupdate <- function(state, newfile, flds=NULL, nIter.jumping=5, nIter.transi
   # Now do the SMCMC update on each member of the ensemble
   samplist <- foreach::foreach(s=seq_len(ensemblesize), .inorder=TRUE) %dopar% {
     # Initial values
-    mcurr <- state$m[,s]
-    ucurr <- state$u[,s]
-    slcurr <- streaminglinks(filesizes)
-    slcurr <- swapprefix(slcurr, state$Z[,s], conflict="error")
+    mcurr <- ensemble$m[,s]
+    ucurr <- ensemble$u[,s]
+    slcurr <- streaminglinks(filesizes, ensemble$Z[,s])
 
     # Jumping kernel for links to new file
     for (i in seq_len(nIter.jumping)) {
       if (proposals.jumping == "LB") {
         slcurr <- draw.Z.locbal.lastfile(newcmps, slcurr, mcurr, ucurr,
-                                         state$priors$aBM, state$priors$bBM,
+                                         priors$aBM, priors$bBM,
                                          blocksize=blocksize)
       } else if (proposals.jumping == "component") {
         slcurr <- draw.Z.componentwise(length(filesizes), cmpdata, slcurr, mcurr,
-                                       ucurr, state$priors$aBM, state$priors$bBM)
+                                       ucurr, priors$aBM, priors$bBM)
       }
     }
 
     # Transition kernel for all parameters
     for (i in seq_len(nIter.transition)) {
       # m and u full conditional update
-      tmp <- r_m_u_fc_smcmc(cmpdata, slcurr, state$priors$a, state$priors$b)
+      tmp <- r_m_u_fc_smcmc(cmpdata, slcurr, priors$a, priors$b)
       mcurr <- tmp$m
       ucurr <- tmp$u
 
       for (f in seq(2, length(files))) {
         if (proposals.transition == "LB") {
           slcurr <- draw.Z.locbal(f, cmpdata, slcurr, mcurr, ucurr,
-                                  state$priors$aBM, state$priors$bBM,
+                                  priors$aBM, priors$bBM,
                                   blocksize=blocksize)
         } else if (proposals.transition == "component") {
           slcurr <- draw.Z.componentwise(f, cmpdata, slcurr, mcurr, ucurr,
-                                         state$priors$aBM, state$priors$bBM)
+                                         priors$aBM, priors$bBM)
         }
       }
     }
@@ -146,11 +199,11 @@ SMCMCupdate <- function(state, newfile, flds=NULL, nIter.jumping=5, nIter.transi
   }
 
   # Pack parallel results into arrays
-  msamples <- matrix(NA, nrow=nrow(state$m), ncol=ensemblesize)
-  usamples <- matrix(NA, nrow=nrow(state$u), ncol=ensemblesize)
+  msamples <- matrix(NA, nrow=nrow(ensemble$m), ncol=ensemblesize)
+  usamples <- matrix(NA, nrow=nrow(ensemble$u), ncol=ensemblesize)
   Zsamples <- matrix(NA, nrow=length(savestate(samplist[[1]]$sl)), ncol=ensemblesize)
-  m.fc.pars <- matrix(0, nrow=nrow(state$m), ncol=ensemblesize)
-  u.fc.pars <- matrix(0, nrow=nrow(state$u), ncol=ensemblesize)
+  m.fc.pars <- matrix(0, nrow=nrow(ensemble$m), ncol=ensemblesize)
+  u.fc.pars <- matrix(0, nrow=nrow(ensemble$u), ncol=ensemblesize)
   for (s in seq_len(ensemblesize)) {
     msamples[,s] <- samplist[[s]]$m
     usamples[,s] <- samplist[[s]]$u
@@ -165,10 +218,6 @@ SMCMCupdate <- function(state, newfile, flds=NULL, nIter.jumping=5, nIter.transi
       Z = Zsamples,
       m = msamples,
       u = usamples,
-      files = files,
-      comparisons = cmpdata,
-      priors = state$priors,
-      cmpdetails = cmpdetails,
       m.fc.pars = m.fc.pars,
       u.fc.pars = u.fc.pars,
       diagnostics = list(
