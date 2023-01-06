@@ -8,7 +8,7 @@
 #' @param newfile A data.frame representing the new file: one row per record
 #' @param flds Names of fields in the new file to use for comparison. Only used
 #'   if no global field names were specified in bipartiteRL initially.
-#' @param nIter Number of iterations for which to run the PPRB sampler. By
+#' @param nIter.PPRB Number of iterations for which to run the PPRB sampler. By
 #'   default, this is the same as the number of samples present in 'state'.
 #' @param burn Number of initial iterations to discard. The total number of
 #'   samples returned is nIter - burn.
@@ -32,6 +32,19 @@
 #'   update is run sequentially. A cluster is created using
 #'   parallel::makeCluster().
 #' @param seed Random seed to set at the beginning of the MCMC run
+#'
+#' @return An object of class 'bstrlstate' containing posterior samples and
+#'   necessary metadata for passing to future streaming updates.
+#' @examples
+#' data(geco_small)
+#' data(geco_small_result)
+#'
+#' # Add fifth file to previous four-file link result
+#' filtered <- thinsamples(geco_small_result, 2) # Filter ensemble to 2 - very small for example
+#' file5.result <- PPRBWTupdate(filtered, geco_small[[5]],
+#'                             nIter.PPRB=2, burn=1, nIter.transition=1, # Very small run for example
+#'                             proposals.transition="LB",
+#'                             blocksize=5)
 #' @export
 PPRBWTupdate <- function(state, newfile, flds = NULL,
                          nIter.PPRB = NULL, burn = 0, blocksize = NULL,
@@ -49,7 +62,7 @@ PPRBWTupdate <- function(state, newfile, flds = NULL,
   # SMCMC transition kernel application starts here
   ensemble <- list(m=postpprb$m, u=postpprb$u, Z=postpprb$Z)
 
-  updated <- coreSMCMCupdate(ensemble, postpprb$priors, postpprb$files, postpprb$cmpdata,
+  updated <- coreSMCMCupdate(ensemble, postpprb$priors, postpprb$files, postpprb$comparisons,
                              nIter.jumping=0, nIter.transition=nIter.transition,
                              cores=cores,
                              proposals.jumping="LB", proposals.transition=proposals.transition,
@@ -57,7 +70,7 @@ PPRBWTupdate <- function(state, newfile, flds = NULL,
 
   # Assemble final object and return
   updated$files <- postpprb$files
-  updated$comparisons <- postpprb$cmpdata
+  updated$comparisons <- postpprb$comparisons
   updated$priors <- postpprb$priors
   updated$cmpdetails <- postpprb$cmpdetails
 

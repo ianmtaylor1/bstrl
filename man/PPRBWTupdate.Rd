@@ -29,6 +29,9 @@ ensemble of samples for the update}
 \item{flds}{Names of fields in the new file to use for comparison. Only used
 if no global field names were specified in bipartiteRL initially.}
 
+\item{nIter.PPRB}{Number of iterations for which to run the PPRB sampler. By
+default, this is the same as the number of samples present in 'state'.}
+
 \item{burn}{Number of initial iterations to discard. The total number of
 samples returned is nIter - burn.}
 
@@ -58,10 +61,22 @@ update is run sequentially. A cluster is created using
 parallel::makeCluster().}
 
 \item{seed}{Random seed to set at the beginning of the MCMC run}
-
-\item{nIter}{Number of iterations for which to run the PPRB sampler. By
-default, this is the same as the number of samples present in 'state'.}
+}
+\value{
+An object of class 'bstrlstate' containing posterior samples and
+necessary metadata for passing to future streaming updates.
 }
 \description{
 Perform a PPRB-with-Transition update of record linkage with a new file
+}
+\examples{
+data(geco_small)
+data(geco_small_result)
+
+# Add fifth file to previous four-file link result
+filtered <- thinsamples(geco_small_result, 2) # Filter ensemble to 2 - very small for example
+file5.result <- PPRBWTupdate(filtered, geco_small[[5]],
+                            nIter.PPRB=2, burn=1, nIter.transition=1, # Very small run for example
+                            proposals.transition="LB",
+                            blocksize=5)
 }
