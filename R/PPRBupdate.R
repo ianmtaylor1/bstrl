@@ -2,7 +2,7 @@
 #' Perform a PPRB update of record linkage with a new file
 #'
 #' @param state Existing record linkage state. Returned by either bipartiteRL,
-#'   PPRBupdate, SMCMCupdate, or multifileRL.
+#'   PPRBupdate, SMCMCupdate, PRPBWTupdate, or multifileRL.
 #' @param newfile A data.frame representing the new file: one row per record
 #' @param flds Names of fields in the new file to use for comparison. Only used
 #'   if no global field names were specified in bipartiteRL initially.

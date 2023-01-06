@@ -19,8 +19,8 @@ SMCMCupdate(
 }
 \arguments{
 \item{state}{Existing record linkage state. Returned by either bipartiteRL,
-PPRBupdate, SMCMCupdate, or multifileRL. This is used as the ensemble of
-samples in SMCMC update}
+PPRBupdate, SMCMCupdate, PRPBWTupdate, or multifileRL. This is used as the
+ensemble of samples in SMCMC update}
 
 \item{newfile}{A data.frame representing the new file: one row per record}
 

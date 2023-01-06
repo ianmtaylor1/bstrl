@@ -18,7 +18,7 @@ PPRBupdate(
 }
 \arguments{
 \item{state}{Existing record linkage state. Returned by either bipartiteRL,
-PPRBupdate, SMCMCupdate, or multifileRL.}
+PPRBupdate, SMCMCupdate, PRPBWTupdate, or multifileRL.}
 
 \item{newfile}{A data.frame representing the new file: one row per record}
 
