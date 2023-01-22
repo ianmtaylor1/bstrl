@@ -184,7 +184,11 @@ coreSMCMCupdate <- function(ensemble, priors, files, cmpdata,
 
   # Transition kernel for all parameters. Outer loop is number of iterations,
   # inner (parallel) loop is each ensemble member point
+  itertimes <- rep(NA, nIter.transition) # Store time of each iteration
+
   for (i in seq_len(nIter.transition)) {
+
+    iterstart <- Sys.time()
     samplist <- foreach::foreach(s=samplist, .inorder=TRUE) %dopar% {
       # Initial values
       mcurr <- s$m
@@ -223,6 +227,12 @@ coreSMCMCupdate <- function(ensemble, priors, files, cmpdata,
       # Return a list of the ending values
       ret
     }
+    iterend <- Sys.time()
+
+    itertimes[i] <- as.double(iterend - iterstart, units="secs")
+
+    # TODO: measure of error/convergence?
+
   }
 
   samplingend <- Sys.time() # Stop the clock
@@ -256,7 +266,8 @@ coreSMCMCupdate <- function(ensemble, priors, files, cmpdata,
       diagnostics = list(
         samplingtime = as.double(samplingend - samplingstart, units="secs"),
         jumpingtime = as.double(jumpingend - samplingstart, units="secs"),
-        transitiontime = as.double(samplingend - jumpingend, units="secs")
+        transitiontime = as.double(samplingend - jumpingend, units="secs"),
+        itertimes = itertimes
       )
     ),
     class = "bstrlstate"

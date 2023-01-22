@@ -78,7 +78,8 @@ PPRBWTupdate <- function(state, newfile, flds = NULL,
     pprb.burntime = postpprb$diagnostics$burntime,
     pprb.samplingtime = postpprb$diagnostics$samplingtime,
     pprb.accepted = postpprb$diagnostics$pprb.accepted,
-    transitiontime = updated$diagnostics$transitiontime
+    transitiontime = updated$diagnostics$transitiontime,
+    itertimes = updated$diagnostics$itertimes
   )
 
   return(updated)
