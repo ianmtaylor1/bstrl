@@ -157,40 +157,44 @@ coreSMCMCupdate <- function(ensemble, priors, files, cmpdata,
   samplingstart <- Sys.time() # Start the clock to time sampling
 
   # Now do the SMCMC update on each member of the ensemble
-  samplist <- foreach::foreach(s=samplist, .inorder=TRUE) %dopar% {
-    # Initial values
-    mcurr <- s$m
-    ucurr <- s$u
-    slcurr <- s$sl
+  if (nIter.jumping > 0) {
+    samplist <- foreach::foreach(s=samplist, .inorder=TRUE) %dopar% {
+      # Initial values
+      mcurr <- s$m
+      ucurr <- s$u
+      slcurr <- s$sl
 
-    # Jumping kernel for links to new file
-    for (i in seq_len(nIter.jumping)) {
-      if (proposals.jumping == "LB") {
-        slcurr <- draw.Z.locbal.lastfile(newcmps, slcurr, mcurr, ucurr,
-                                         priors$aBM, priors$bBM,
-                                         blocksize=blocksize)
-      } else if (proposals.jumping == "component") {
-        slcurr <- draw.Z.componentwise(length(filesizes), cmpdata, slcurr, mcurr,
-                                       ucurr, priors$aBM, priors$bBM)
+      # Jumping kernel for links to new file
+      for (i in seq_len(nIter.jumping)) {
+        if (proposals.jumping == "LB") {
+          slcurr <- draw.Z.locbal.lastfile(newcmps, slcurr, mcurr, ucurr,
+                                           priors$aBM, priors$bBM,
+                                           blocksize=blocksize)
+        } else if (proposals.jumping == "component") {
+          slcurr <- draw.Z.componentwise(length(filesizes), cmpdata, slcurr, mcurr,
+                                         ucurr, priors$aBM, priors$bBM)
+        }
       }
     }
   }
 
   jumpingend <- Sys.time() # Record the end of jumping kernel
 
-  samplist <- foreach::foreach(s=samplist, .inorder=TRUE) %dopar% {
-    # Initial values
-    mcurr <- s$m
-    ucurr <- s$u
-    slcurr <- s$sl
+  # Transition kernel for all parameters. Outer loop is number of iterations,
+  # inner (parallel) loop is each ensemble member point
+  for (i in seq_len(nIter.transition)) {
+    samplist <- foreach::foreach(s=samplist, .inorder=TRUE) %dopar% {
+      # Initial values
+      mcurr <- s$m
+      ucurr <- s$u
+      slcurr <- s$sl
 
-    # Transition kernel for all parameters
-    for (i in seq_len(nIter.transition)) {
       # m and u full conditional update
       tmp <- r_m_u_fc_smcmc(cmpdata, slcurr, priors$a, priors$b)
       mcurr <- tmp$m
       ucurr <- tmp$u
 
+      # Links full conditional updates
       for (f in seq(2, length(files))) {
         if (proposals.transition == "LB") {
           slcurr <- draw.Z.locbal(f, cmpdata, slcurr, mcurr, ucurr,
@@ -201,14 +205,22 @@ coreSMCMCupdate <- function(ensemble, priors, files, cmpdata,
                                          priors$aBM, priors$bBM)
         }
       }
+
+      ret <- list(m=mcurr, u=ucurr, sl=slcurr)
+
+      # Only on last iteration: Calculate summary statistics of comparisons
+      # for potential use later in PPRB (done here to take advantage of
+      # parallelization)
+      if (i == nIter.transition) {
+        tmp <- disag.counts.allfiles(cmpdata, slcurr)
+
+        ret$m.fc.pars <- tmp$match
+        ret$u.fc.pars <- tmp$nonmatch
+      }
+
+      # Return a list of the ending values
+      ret
     }
-
-    # Calculate summary statistics of comparisons for potential use later in
-    # PPRB (done here to take advantage of parallelization)
-    tmp <- disag.counts.allfiles(cmpdata, slcurr)
-
-    # Return a list of the ending values
-    list(m=mcurr, u=ucurr, sl=slcurr, m.fc.pars=tmp$match, u.fc.pars=tmp$nonmatch)
   }
 
   samplingend <- Sys.time() # Stop the clock
