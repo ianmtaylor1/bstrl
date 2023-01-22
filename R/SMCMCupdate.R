@@ -129,6 +129,16 @@ coreSMCMCupdate <- function(ensemble, priors, files, cmpdata,
   # How big is the ensemble we are working with?
   ensemblesize <- ncol(ensemble$Z)
 
+  # Unpack starting ensemble into list
+  samplist <- list()
+  for (i in seq_len(ensemblesize)) {
+    samplist[[i]] <- list(
+      m=ensemble$m[,i],
+      u=ensemble$u[,i],
+      sl=streaminglinks(filesizes, ensemble$Z[,i])
+    )
+  }
+
   # Create cluster if necessary and register for parallel execution
   if (cores > 1) {
     cl <- parallel::makeCluster(cores)
@@ -147,11 +157,11 @@ coreSMCMCupdate <- function(ensemble, priors, files, cmpdata,
   samplingstart <- Sys.time() # Start the clock to time sampling
 
   # Now do the SMCMC update on each member of the ensemble
-  samplist <- foreach::foreach(s=seq_len(ensemblesize), .inorder=TRUE) %dopar% {
+  samplist <- foreach::foreach(s=samplist, .inorder=TRUE) %dopar% {
     # Initial values
-    mcurr <- ensemble$m[,s]
-    ucurr <- ensemble$u[,s]
-    slcurr <- streaminglinks(filesizes, ensemble$Z[,s])
+    mcurr <- s$m
+    ucurr <- s$u
+    slcurr <- s$sl
 
     # Jumping kernel for links to new file
     for (i in seq_len(nIter.jumping)) {
@@ -164,6 +174,15 @@ coreSMCMCupdate <- function(ensemble, priors, files, cmpdata,
                                        ucurr, priors$aBM, priors$bBM)
       }
     }
+  }
+
+  jumpingend <- Sys.time() # Record the end of jumping kernel
+
+  samplist <- foreach::foreach(s=samplist, .inorder=TRUE) %dopar% {
+    # Initial values
+    mcurr <- s$m
+    ucurr <- s$u
+    slcurr <- s$sl
 
     # Transition kernel for all parameters
     for (i in seq_len(nIter.transition)) {
@@ -221,7 +240,9 @@ coreSMCMCupdate <- function(ensemble, priors, files, cmpdata,
       m.fc.pars = m.fc.pars,
       u.fc.pars = u.fc.pars,
       diagnostics = list(
-        samplingtime = as.double(samplingend - samplingstart, units="secs")
+        samplingtime = as.double(samplingend - samplingstart, units="secs"),
+        jumpingtime = as.double(jumpingend - samplingstart, units="secs"),
+        transitiontime = as.double(samplingend - jumpingend, units="secs")
       )
     ),
     class = "bstrlstate"

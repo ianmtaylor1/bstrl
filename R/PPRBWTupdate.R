@@ -73,6 +73,13 @@ PPRBWTupdate <- function(state, newfile, flds = NULL,
   updated$comparisons <- postpprb$comparisons
   updated$priors <- postpprb$priors
   updated$cmpdetails <- postpprb$cmpdetails
+  # Combine timing/diagnostics
+  updated$diagnostics <- list(
+    pprb.burntime = postpprb$diagnostics$burntime,
+    pprb.samplingtime = postpprb$diagnostics$samplingtime,
+    pprb.accepted = postpprb$diagnostics$pprb.accepted,
+    transitiontime = updated$diagnostics$transitiontime
+  )
 
   return(updated)
 
