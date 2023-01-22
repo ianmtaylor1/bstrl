@@ -175,6 +175,8 @@ coreSMCMCupdate <- function(ensemble, priors, files, cmpdata,
                                          ucurr, priors$aBM, priors$bBM)
         }
       }
+
+      list(m=mcurr, u=ucurr, sl=slcurr)
     }
   }
 
