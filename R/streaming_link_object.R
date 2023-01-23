@@ -130,6 +130,11 @@ savestate <- function(sl) {
   sl$Z[seq(sl$ns[1] + 1, length(sl$Z))]
 }
 
+# Return a vector of file sizes from the link object
+filesizes <- function(sl) {
+  sl$ns
+}
+
 #' Return True/False whether the two record are coreferent
 #'
 #' @param sl A streaming link object

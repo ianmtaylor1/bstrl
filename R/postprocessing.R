@@ -171,3 +171,48 @@ recall <- function(sl.est, sl.true) {
                    SIMPLIFY = TRUE)
   mean(isest)
 }
+
+
+#' Calculate the Rand index similarity between the clusterings defined by
+#' two sets of links
+#'
+#' @details Rand Index is a symmetrical measure of similarity between two
+#' clusterings, defined as (a+b)/(n choose 2) where 'a' is the number of pairs
+#' of elements in the same subset in both clusterings, 'b' is the number of pairs
+#' of elements in different subsets in both clustering, and 'n' is the total
+#' number of elements.
+#'
+#' @param sl1,sl2 Two streaming link objects defining two sets of links. E.g.
+#'   one can be a known truth and one can be an estimated link set
+#'
+#' @return A value between 0 and 1, the rand index of these two clusterings
+#'
+#' @examples
+#' data(geco_small)
+#' data(geco_small_result)
+#'
+#' sl.true <- fromentities(geco_small[[1]]$entity, geco_small[[2]]$entity,
+#'                         geco_small[[3]]$entity, geco_small[[4]]$entity)
+#'
+#' posterior <- extractlinks(geco_small_result)
+#' # Compare one posterior sample to previously computed known truth
+#' class(sl.true)
+#' randindex(posterior[[42]], sl.true)
+#'
+#' @export
+randindex <- function(sl1, sl2) {
+  stopifnot(filesizes(sl1) == filesizes(sl2))
+  n <- sum(filesizes(sl1))
+  links1 <- alllinks(sl1, idx="global")
+  alsoin2 <- mapply(function(x, y, sl) islinked.gl(sl, x, y),
+                  links1$idx1, links1$idx2,
+                  MoreArgs = list(sl2),
+                  SIMPLIFY = TRUE)
+  links2 <- alllinks(sl2, idx="global")
+  alsoin1 <- mapply(function(x, y, sl) islinked.gl(sl, x, y),
+                    links2$idx1, links2$idx2,
+                    MoreArgs = list(sl1),
+                    SIMPLIFY = TRUE)
+  numnotincommon <- sum(1 - alsoin1) + sum(1 - alsoin2)
+  return(1.0 - numnotincommon / choose(n, 2))
+}
