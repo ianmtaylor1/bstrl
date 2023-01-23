@@ -14,7 +14,8 @@ SMCMCupdate(
   proposals.jumping = c("component", "LB"),
   proposals.transition = c("LB", "component"),
   blocksize = NULL,
-  seed = 0
+  seed = 0,
+  comparison.links = NULL
 )
 }
 \arguments{
@@ -43,6 +44,12 @@ Default performs unblocked locally balanced proposals.}
 
 \item{seed}{Random seed to set at the beginning of the MCMC run. This is
 ignored if cores > 1.}
+
+\item{comparison.links}{A streaminglinks object for the purpose of diagnosing
+the convergence of the SMCMC sampler. After the jumping kernel and each
+transition kernel application, the rand index comparing each ensemble
+member to this comparison link object is calculated and returned in the
+diagnostics.}
 }
 \value{
 An object of class 'bstrlstate' containing posterior samples and

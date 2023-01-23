@@ -32,6 +32,11 @@
 #'   update is run sequentially. A cluster is created using
 #'   parallel::makeCluster().
 #' @param seed Random seed to set at the beginning of the MCMC run
+#' @param comparison.links A streaminglinks object for the purpose of diagnosing
+#'   the convergence of the transition kernel. After the PPRB step and each
+#'   transition kernel application, the rand index comparing each ensemble
+#'   member to this comparison link object is calculated and returned in the
+#'   diagnostics.
 #'
 #' @return An object of class 'bstrlstate' containing posterior samples and
 #'   necessary metadata for passing to future streaming updates.
@@ -51,7 +56,8 @@ PPRBWTupdate <- function(state, newfile, flds = NULL,
                          threestep = TRUE, refresh=0.1,
                          nIter.transition=10, proposals.transition=c("LB", "component"),
                          cores=1,
-                         seed=0) {
+                         seed=0,
+                         comparison.links=NULL) {
 
   proposals.transition <- match.arg(proposals.transition)
 
@@ -66,7 +72,7 @@ PPRBWTupdate <- function(state, newfile, flds = NULL,
                              nIter.jumping=0, nIter.transition=nIter.transition,
                              cores=cores,
                              proposals.jumping="LB", proposals.transition=proposals.transition,
-                             blocksize=blocksize, seed=NULL)
+                             blocksize=blocksize, seed=NULL, comparison.links=comparison.links)
 
   # Assemble final object and return
   updated$files <- postpprb$files
@@ -79,7 +85,8 @@ PPRBWTupdate <- function(state, newfile, flds = NULL,
     pprb.samplingtime = postpprb$diagnostics$samplingtime,
     pprb.accepted = postpprb$diagnostics$pprb.accepted,
     transitiontime = updated$diagnostics$transitiontime,
-    itertimes = updated$diagnostics$itertimes
+    itertimes = updated$diagnostics$itertimes,
+    rand.indices = updated$diagnostics$rand.indices
   )
 
   return(updated)

@@ -19,6 +19,11 @@
 #'   Default performs unblocked locally balanced proposals.
 #' @param seed Random seed to set at the beginning of the MCMC run. This is
 #'   ignored if cores > 1.
+#' @param comparison.links A streaminglinks object for the purpose of diagnosing
+#'   the convergence of the SMCMC sampler. After the jumping kernel and each
+#'   transition kernel application, the rand index comparing each ensemble
+#'   member to this comparison link object is calculated and returned in the
+#'   diagnostics.
 #'
 #' @return An object of class 'bstrlstate' containing posterior samples and
 #'   necessary metadata for passing to future streaming updates.
@@ -38,7 +43,8 @@
 SMCMCupdate <- function(state, newfile, flds=NULL, nIter.jumping=5, nIter.transition=10,
                         cores=1, proposals.jumping=c("component", "LB"),
                         proposals.transition=c("LB", "component"), blocksize=NULL,
-                        seed=0) { # Future additions: directratio and fastmu?
+                        seed=0,
+                        comparison.links=NULL) { # Future additions: directratio and fastmu?
   proposals.jumping <- match.arg(proposals.jumping)
   proposals.transition <- match.arg(proposals.transition)
 
@@ -85,7 +91,7 @@ SMCMCupdate <- function(state, newfile, flds=NULL, nIter.jumping=5, nIter.transi
   updated <- coreSMCMCupdate(ensemble, state$priors, files, cmpdata,
                              nIter.jumping, nIter.transition, cores,
                              proposals.jumping, proposals.transition,
-                             blocksize, seed)
+                             blocksize, seed, comparison.links)
 
   # Construct and return the new link state
   updated$files <- files
@@ -111,7 +117,7 @@ coreSMCMCupdate <- function(ensemble, priors, files, cmpdata,
                             nIter.jumping, nIter.transition,
                             cores, proposals.jumping, proposals.transition,
                             blocksize,
-                            seed) {
+                            seed, comparison.links) {
 
   # Pull out comparisons with most recent file
   newcmps <- cmpdata[[length(cmpdata)]]
@@ -137,6 +143,13 @@ coreSMCMCupdate <- function(ensemble, priors, files, cmpdata,
       u=ensemble$u[,i],
       sl=streaminglinks(filesizes, ensemble$Z[,i])
     )
+  }
+
+  # Matrix for storing rand index, if applicable
+  if (!is.null(comparison.links)) {
+    rand.indices <- matrix(NA, nrow=nIter.transition+1, ncol=ensemblesize)
+  } else {
+    rand.indices <- NULL
   }
 
   # Create cluster if necessary and register for parallel execution
@@ -181,6 +194,11 @@ coreSMCMCupdate <- function(ensemble, priors, files, cmpdata,
   }
 
   jumpingend <- Sys.time() # Record the end of jumping kernel
+
+  # Store the rand index post jumping kernel
+  if (!is.null(comparison.links)) {
+    rand.indices[1,] <- calcrandindices(samplist, comparison.links)
+  }
 
   # Transition kernel for all parameters. Outer loop is number of iterations,
   # inner (parallel) loop is each ensemble member point
@@ -231,7 +249,10 @@ coreSMCMCupdate <- function(ensemble, priors, files, cmpdata,
 
     itertimes[i] <- as.double(iterend - iterstart, units="secs")
 
-    # TODO: measure of error/convergence?
+    # Calculate rand indices after this iteration
+    if (!is.null(comparison.links)) {
+      rand.indices[i+1,] <- calcrandindices(samplist, comparison.links)
+    }
 
   }
 
@@ -267,9 +288,20 @@ coreSMCMCupdate <- function(ensemble, priors, files, cmpdata,
         samplingtime = as.double(samplingend - samplingstart, units="secs"),
         jumpingtime = as.double(jumpingend - samplingstart, units="secs"),
         transitiontime = as.double(samplingend - jumpingend, units="secs"),
-        itertimes = itertimes
+        itertimes = itertimes,
+        rand.indices = rand.indices
       )
     ),
     class = "bstrlstate"
   )
+}
+
+# Calculate the rand index of each member of samplist against the reference,
+# return as a vector the same length as samplist
+calcrandindices <- function(samplist, reference) {
+  ri <- rep(NA, length(samplist))
+  for (j in seq_along(samplist)) {
+    ri[j] <- randindex(samplist[[j]]$sl, reference)
+  }
+  ri
 }
