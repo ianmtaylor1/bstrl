@@ -32,10 +32,11 @@
 #'   update is run sequentially. A cluster is created using
 #'   parallel::makeCluster().
 #' @param seed Random seed to set at the beginning of the MCMC run
-#' @param comparison.links A streaminglinks object for the purpose of diagnosing
-#'   the convergence of the transition kernel. After the PPRB step and each
-#'   transition kernel application, the rand index comparing each ensemble
-#'   member to this comparison link object is calculated and returned in the
+#' @param comparison.links A bstrlstate object for the purpose of diagnosing
+#'   the convergence of the transition kernel, relative to other samples from the
+#'   target posterior. After the PPRB step and each transition kernel
+#'   application, the KS statistic comparing each component of m to the samples
+#'   in this comparison samples object is calculated and returned in the
 #'   diagnostics.
 #'
 #' @return An object of class 'bstrlstate' containing posterior samples and
@@ -57,7 +58,7 @@ PPRBWTupdate <- function(state, newfile, flds = NULL,
                          nIter.transition=10, proposals.transition=c("LB", "component"),
                          cores=1,
                          seed=0,
-                         comparison.links=NULL) {
+                         comparison.samples=NULL) {
 
   proposals.transition <- match.arg(proposals.transition)
 
@@ -72,7 +73,7 @@ PPRBWTupdate <- function(state, newfile, flds = NULL,
                              nIter.jumping=0, nIter.transition=nIter.transition,
                              cores=cores,
                              proposals.jumping="LB", proposals.transition=proposals.transition,
-                             blocksize=blocksize, seed=NULL, comparison.links=comparison.links)
+                             blocksize=blocksize, seed=NULL, comparison.samples=comparison.samples)
 
   # Assemble final object and return
   updated$files <- postpprb$files
@@ -86,7 +87,7 @@ PPRBWTupdate <- function(state, newfile, flds = NULL,
     pprb.accepted = postpprb$diagnostics$pprb.accepted,
     transitiontime = updated$diagnostics$transitiontime,
     itertimes = updated$diagnostics$itertimes,
-    rand.indices = updated$diagnostics$rand.indices
+    ksstats.m = updated$diagnostics$ksstats.m
   )
 
   return(updated)

@@ -45,10 +45,11 @@ Default performs unblocked locally balanced proposals.}
 \item{seed}{Random seed to set at the beginning of the MCMC run. This is
 ignored if cores > 1.}
 
-\item{comparison.links}{A streaminglinks object for the purpose of diagnosing
-the convergence of the SMCMC sampler. After the jumping kernel and each
-transition kernel application, the rand index comparing each ensemble
-member to this comparison link object is calculated and returned in the
+\item{comparison.samples}{A bstrlstate object for the purpose of diagnosing
+the convergence of the SMCMC sampler, relative to other samples from the
+target posterior. After the jumping kernel and each transition kernel
+application, the KS statistic comparing each component of m to the samples
+in this comparison samples object is calculated and returned in the
 diagnostics.}
 }
 \value{

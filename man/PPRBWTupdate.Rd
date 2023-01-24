@@ -17,7 +17,7 @@ PPRBWTupdate(
   proposals.transition = c("LB", "component"),
   cores = 1,
   seed = 0,
-  comparison.links = NULL
+  comparison.samples = NULL
 )
 }
 \arguments{
@@ -63,10 +63,11 @@ parallel::makeCluster().}
 
 \item{seed}{Random seed to set at the beginning of the MCMC run}
 
-\item{comparison.links}{A streaminglinks object for the purpose of diagnosing
-the convergence of the transition kernel. After the PPRB step and each
-transition kernel application, the rand index comparing each ensemble
-member to this comparison link object is calculated and returned in the
+\item{comparison.links}{A bstrlstate object for the purpose of diagnosing
+the convergence of the transition kernel, relative to other samples from the
+target posterior. After the PPRB step and each transition kernel
+application, the KS statistic comparing each component of m to the samples
+in this comparison samples object is calculated and returned in the
 diagnostics.}
 }
 \value{

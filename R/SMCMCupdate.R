@@ -19,10 +19,11 @@
 #'   Default performs unblocked locally balanced proposals.
 #' @param seed Random seed to set at the beginning of the MCMC run. This is
 #'   ignored if cores > 1.
-#' @param comparison.links A streaminglinks object for the purpose of diagnosing
-#'   the convergence of the SMCMC sampler. After the jumping kernel and each
-#'   transition kernel application, the rand index comparing each ensemble
-#'   member to this comparison link object is calculated and returned in the
+#' @param comparison.samples A bstrlstate object for the purpose of diagnosing
+#'   the convergence of the SMCMC sampler, relative to other samples from the
+#'   target posterior. After the jumping kernel and each transition kernel
+#'   application, the KS statistic comparing each component of m to the samples
+#'   in this comparison samples object is calculated and returned in the
 #'   diagnostics.
 #'
 #' @return An object of class 'bstrlstate' containing posterior samples and
@@ -117,7 +118,7 @@ coreSMCMCupdate <- function(ensemble, priors, files, cmpdata,
                             nIter.jumping, nIter.transition,
                             cores, proposals.jumping, proposals.transition,
                             blocksize,
-                            seed, comparison.links) {
+                            seed, comparison.samples) {
 
   # Pull out comparisons with most recent file
   newcmps <- cmpdata[[length(cmpdata)]]
@@ -146,10 +147,10 @@ coreSMCMCupdate <- function(ensemble, priors, files, cmpdata,
   }
 
   # Matrix for storing rand index, if applicable
-  if (!is.null(comparison.links)) {
-    rand.indices <- matrix(NA, nrow=nIter.transition+1, ncol=ensemblesize)
+  if (!is.null(comparison.samples)) {
+    ksstats.m <- matrix(NA, nrow=nrow(ensemble$m), ncol=nIter.transition+1)
   } else {
-    rand.indices <- NULL
+    ksstats.m <- NULL
   }
 
   # Create cluster if necessary and register for parallel execution
@@ -196,8 +197,8 @@ coreSMCMCupdate <- function(ensemble, priors, files, cmpdata,
   jumpingend <- Sys.time() # Record the end of jumping kernel
 
   # Store the rand index post jumping kernel
-  if (!is.null(comparison.links)) {
-    rand.indices[1,] <- calcrandindices(samplist, comparison.links)
+  if (!is.null(comparison.samples)) {
+    ksstats.m[,1] <- calc.ks.m(samplist, comparison.samples)
   }
 
   # Transition kernel for all parameters. Outer loop is number of iterations,
@@ -250,8 +251,8 @@ coreSMCMCupdate <- function(ensemble, priors, files, cmpdata,
     itertimes[i] <- as.double(iterend - iterstart, units="secs")
 
     # Calculate rand indices after this iteration
-    if (!is.null(comparison.links)) {
-      rand.indices[i+1,] <- calcrandindices(samplist, comparison.links)
+    if (!is.null(comparison.samples)) {
+      ksstats.m[,i+1] <- calc.ks.m(samplist, comparison.samples)
     }
 
   }
@@ -287,9 +288,9 @@ coreSMCMCupdate <- function(ensemble, priors, files, cmpdata,
       diagnostics = list(
         samplingtime = as.double(samplingend - samplingstart, units="secs"),
         jumpingtime = as.double(jumpingend - samplingstart, units="secs"),
-        transitiontime = as.double(samplingend - jumpingend, units="secs"),
+        transitiontime = sum(itertimes),
         itertimes = itertimes,
-        rand.indices = rand.indices
+        ksstats.m = ksstats.m
       )
     ),
     class = "bstrlstate"
@@ -304,4 +305,18 @@ calcrandindices <- function(samplist, reference) {
     ri[j] <- randindex(samplist[[j]]$sl, reference)
   }
   ri
+}
+
+# Calcualte the ks-statistic between samples of each component of m for the
+# current sample list and the reference samples passed to the function
+calc.ks.m <- function(samplist, reference) {
+  msamples <- matrix(NA, nrow=length(samplist[[1]]$m), ncol=length(samplist))
+  for(s in seq_along(samplist)) {
+    msamples[,s] <- samplist[[s]]$m
+  }
+  ksstats <- rep(NA, nrow(msamples))
+  for (i in seq_len(nrow(msamples))) {
+    ksstats[i] <- suppressWarnings(ks.test(msamples[i,], reference$m[i,])$statistic)
+  }
+  ksstats
 }
