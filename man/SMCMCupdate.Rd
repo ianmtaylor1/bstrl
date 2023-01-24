@@ -15,7 +15,7 @@ SMCMCupdate(
   proposals.transition = c("LB", "component"),
   blocksize = NULL,
   seed = 0,
-  comparison.links = NULL
+  comparison.samples = NULL
 )
 }
 \arguments{

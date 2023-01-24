@@ -45,7 +45,7 @@ SMCMCupdate <- function(state, newfile, flds=NULL, nIter.jumping=5, nIter.transi
                         cores=1, proposals.jumping=c("component", "LB"),
                         proposals.transition=c("LB", "component"), blocksize=NULL,
                         seed=0,
-                        comparison.links=NULL) { # Future additions: directratio and fastmu?
+                        comparison.samples=NULL) { # Future additions: directratio and fastmu?
   proposals.jumping <- match.arg(proposals.jumping)
   proposals.transition <- match.arg(proposals.transition)
 
@@ -92,7 +92,7 @@ SMCMCupdate <- function(state, newfile, flds=NULL, nIter.jumping=5, nIter.transi
   updated <- coreSMCMCupdate(ensemble, state$priors, files, cmpdata,
                              nIter.jumping, nIter.transition, cores,
                              proposals.jumping, proposals.transition,
-                             blocksize, seed, comparison.links)
+                             blocksize, seed, comparison.samples)
 
   # Construct and return the new link state
   updated$files <- files
@@ -316,7 +316,7 @@ calc.ks.m <- function(samplist, reference) {
   }
   ksstats <- rep(NA, nrow(msamples))
   for (i in seq_len(nrow(msamples))) {
-    ksstats[i] <- suppressWarnings(ks.test(msamples[i,], reference$m[i,])$statistic)
+    ksstats[i] <- suppressWarnings(stats::ks.test(msamples[i,], reference$m[i,])$statistic)
   }
   ksstats
 }

@@ -63,7 +63,7 @@ parallel::makeCluster().}
 
 \item{seed}{Random seed to set at the beginning of the MCMC run}
 
-\item{comparison.links}{A bstrlstate object for the purpose of diagnosing
+\item{comparison.samples}{A bstrlstate object for the purpose of diagnosing
 the convergence of the transition kernel, relative to other samples from the
 target posterior. After the PPRB step and each transition kernel
 application, the KS statistic comparing each component of m to the samples
