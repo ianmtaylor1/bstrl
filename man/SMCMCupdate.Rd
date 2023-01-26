@@ -15,7 +15,8 @@ SMCMCupdate(
   proposals.transition = c("LB", "component"),
   blocksize = NULL,
   seed = 0,
-  comparison.samples = NULL
+  comparison.samples = NULL,
+  true.links = NULL
 )
 }
 \arguments{
@@ -50,6 +51,12 @@ the convergence of the SMCMC sampler, relative to other samples from the
 target posterior. After the jumping kernel and each transition kernel
 application, the KS statistic comparing each component of m to the samples
 in this comparison samples object is calculated and returned in the
+diagnostics.}
+
+\item{true.links}{A streaminglinks object representing known true links,
+for diagnosing the convergence of the SMCMC sampler. The distribution of
+f1 scores after each transition kernel step is compared to the distribution
+in the comparison.samples using a KS statistic, which is returned in the
 diagnostics.}
 }
 \value{

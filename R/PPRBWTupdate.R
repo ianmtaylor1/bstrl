@@ -38,6 +38,11 @@
 #'   application, the KS statistic comparing each component of m to the samples
 #'   in this comparison samples object is calculated and returned in the
 #'   diagnostics.
+#' @param true.links A streaminglinks object representing known true links,
+#'   for diagnosing the convergence of the transition kernel. The distribution of
+#'   f1 scores after each transition kernel step is compared to the distribution
+#'   in the comparison.samples using a KS statistic, which is returned in the
+#'   diagnostics.
 #'
 #' @return An object of class 'bstrlstate' containing posterior samples and
 #'   necessary metadata for passing to future streaming updates.
@@ -58,7 +63,7 @@ PPRBWTupdate <- function(state, newfile, flds = NULL,
                          nIter.transition=10, proposals.transition=c("LB", "component"),
                          cores=1,
                          seed=0,
-                         comparison.samples=NULL) {
+                         comparison.samples=NULL, true.links=NULL) {
 
   proposals.transition <- match.arg(proposals.transition)
 
@@ -73,7 +78,8 @@ PPRBWTupdate <- function(state, newfile, flds = NULL,
                              nIter.jumping=0, nIter.transition=nIter.transition,
                              cores=cores,
                              proposals.jumping="LB", proposals.transition=proposals.transition,
-                             blocksize=blocksize, seed=NULL, comparison.samples=comparison.samples)
+                             blocksize=blocksize, seed=NULL, comparison.samples=comparison.samples,
+                             true.links=true.links)
 
   # Assemble final object and return
   updated$files <- postpprb$files
@@ -87,7 +93,8 @@ PPRBWTupdate <- function(state, newfile, flds = NULL,
     pprb.accepted = postpprb$diagnostics$pprb.accepted,
     transitiontime = updated$diagnostics$transitiontime,
     itertimes = updated$diagnostics$itertimes,
-    ksstats.m = updated$diagnostics$ksstats.m
+    ksstats.m = updated$diagnostics$ksstats.m,
+    ksstats.f1 = updated$diagnostics$ksstats.f1
   )
 
   return(updated)

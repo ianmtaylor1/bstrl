@@ -25,6 +25,11 @@
 #'   application, the KS statistic comparing each component of m to the samples
 #'   in this comparison samples object is calculated and returned in the
 #'   diagnostics.
+#' @param true.links A streaminglinks object representing known true links,
+#'   for diagnosing the convergence of the SMCMC sampler. The distribution of
+#'   f1 scores after each transition kernel step is compared to the distribution
+#'   in the comparison.samples using a KS statistic, which is returned in the
+#'   diagnostics.
 #'
 #' @return An object of class 'bstrlstate' containing posterior samples and
 #'   necessary metadata for passing to future streaming updates.
@@ -45,7 +50,7 @@ SMCMCupdate <- function(state, newfile, flds=NULL, nIter.jumping=5, nIter.transi
                         cores=1, proposals.jumping=c("component", "LB"),
                         proposals.transition=c("LB", "component"), blocksize=NULL,
                         seed=0,
-                        comparison.samples=NULL) { # Future additions: directratio and fastmu?
+                        comparison.samples=NULL, true.links=NULL) { # Future additions: directratio and fastmu?
   proposals.jumping <- match.arg(proposals.jumping)
   proposals.transition <- match.arg(proposals.transition)
 
@@ -92,7 +97,8 @@ SMCMCupdate <- function(state, newfile, flds=NULL, nIter.jumping=5, nIter.transi
   updated <- coreSMCMCupdate(ensemble, state$priors, files, cmpdata,
                              nIter.jumping, nIter.transition, cores,
                              proposals.jumping, proposals.transition,
-                             blocksize, seed, comparison.samples)
+                             blocksize, seed, comparison.samples,
+                             true.links)
 
   # Construct and return the new link state
   updated$files <- files
@@ -118,7 +124,8 @@ coreSMCMCupdate <- function(ensemble, priors, files, cmpdata,
                             nIter.jumping, nIter.transition,
                             cores, proposals.jumping, proposals.transition,
                             blocksize,
-                            seed, comparison.samples) {
+                            seed,
+                            comparison.samples, true.links) {
 
   # Pull out comparisons with most recent file
   newcmps <- cmpdata[[length(cmpdata)]]
@@ -146,11 +153,27 @@ coreSMCMCupdate <- function(ensemble, priors, files, cmpdata,
     )
   }
 
-  # Matrix for storing rand index, if applicable
+  # Matrix for storing ks statistics, if applicable
+  ksstats.m <- ksstats.f1 <- NULL
   if (!is.null(comparison.samples)) {
     ksstats.m <- matrix(NA, nrow=nrow(ensemble$m), ncol=nIter.transition+1)
-  } else {
-    ksstats.m <- NULL
+
+    if (!is.null(true.links)) {
+      ksstats.f1 <- rep(NA, nIter.transition+1)
+
+      # Precalculate the f1 score distribution for the comparison samples
+      comparison.precision <- sapply(
+        extractlinks(comparison.samples),
+        precision,
+        sl.true = true.links
+      )
+      comparison.recall <- sapply(
+        extractlinks(comparison.samples),
+        recall,
+        sl.true = true.links
+      )
+      comparison.f1 <- (2 * comparison.precision * comparison.recall) / (comparison.precision + comparison.recall)
+    }
   }
 
   # Create cluster if necessary and register for parallel execution
@@ -199,6 +222,9 @@ coreSMCMCupdate <- function(ensemble, priors, files, cmpdata,
   # Store the rand index post jumping kernel
   if (!is.null(comparison.samples)) {
     ksstats.m[,1] <- calc.ks.m(samplist, comparison.samples)
+    if (!is.null(true.links)) {
+      ksstats.f1[1] <- calc.ks.f1(samplist, true.links, comparison.f1)
+    }
   }
 
   # Transition kernel for all parameters. Outer loop is number of iterations,
@@ -253,6 +279,9 @@ coreSMCMCupdate <- function(ensemble, priors, files, cmpdata,
     # Calculate rand indices after this iteration
     if (!is.null(comparison.samples)) {
       ksstats.m[,i+1] <- calc.ks.m(samplist, comparison.samples)
+      if (!is.null(true.links)) {
+        ksstats.f1[i+1] <- calc.ks.f1(samplist, true.links, comparison.f1)
+      }
     }
 
   }
@@ -290,7 +319,8 @@ coreSMCMCupdate <- function(ensemble, priors, files, cmpdata,
         jumpingtime = as.double(jumpingend - samplingstart, units="secs"),
         transitiontime = sum(itertimes),
         itertimes = itertimes,
-        ksstats.m = ksstats.m
+        ksstats.m = ksstats.m,
+        ksstats.f1 = ksstats.f1
       )
     ),
     class = "bstrlstate"
@@ -305,6 +335,16 @@ calcrandindices <- function(samplist, reference) {
     ri[j] <- randindex(samplist[[j]]$sl, reference)
   }
   ri
+}
+
+# Calculate the ks-statistic between the f1 score of the current posterior samples
+# and the reference f1 score - calculated from the reference samples
+calc.ks.f1 <- function(samplist, true.links, reference.f1) {
+  samp.precision <- sapply(samplist, function(x, y) precision(x$sl, y), true.links)
+  samp.recall <- sapply(samplist, function(x, y) recall(x$sl, y), true.links)
+  samp.f1 <- (2 * samp.precision * samp.recall) / (samp.precision + samp.recall)
+
+  suppressWarnings(stats::ks.test(samp.f1, reference.f1)$statistic)
 }
 
 # Calcualte the ks-statistic between samples of each component of m for the
