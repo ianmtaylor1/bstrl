@@ -14,6 +14,8 @@
 #' @param state Object of class bstrlstate, output by bipartiteRL, SMCMCupdate,
 #'   PPRBupdate, or multifileRL
 #' @param count The number of desired samples after filtering
+#' @param random If TRUE, filter to a randomly selected subset of samples. If
+#'   FALSE (default), filter to an evenly spaced subset of samples.
 #'
 #' @return An object of class bstrlstate, containing count samples.
 #'
@@ -23,16 +25,20 @@
 #' stopifnot(ncol(filtered$Z) == 50)
 #'
 #' @export
-thinsamples <- function(state, count) {
+thinsamples <- function(state, count, random = FALSE) {
   N <- ncol(state$Z)
-  if ((count > 1) && (count <= N)) {
-    every <- (N - 1) %/% (count - 1)
-    iterfilter <- seq(N - (count - 1) * every, N, by=every)
-  } else if (count > N) {
+  if (count <= N) {
+    if (random) {
+      iterfilter <- sample(N, count, replace=FALSE)
+    } else if (count > 1) {
+      every <- (N - 1) %/% (count - 1)
+      iterfilter <- seq(N - (count - 1) * every, N, by=every)
+    } else {
+      iterfilter <- c(N)
+    }
+  } else {
     warning("Cannot filter to greater number of samples")
     iterfilter <- seq_len(N)
-  } else {
-    iterfilter <- c(N)
   }
 
   structure(

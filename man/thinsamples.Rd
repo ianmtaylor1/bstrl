@@ -4,13 +4,16 @@
 \alias{thinsamples}
 \title{Thin a bstrlstate object}
 \usage{
-thinsamples(state, count)
+thinsamples(state, count, random = FALSE)
 }
 \arguments{
 \item{state}{Object of class bstrlstate, output by bipartiteRL, SMCMCupdate,
 PPRBupdate, or multifileRL}
 
 \item{count}{The number of desired samples after filtering}
+
+\item{random}{If TRUE, filter to a randomly selected subset of samples. If
+FALSE (default), filter to an evenly spaced subset of samples.}
 }
 \value{
 An object of class bstrlstate, containing count samples.

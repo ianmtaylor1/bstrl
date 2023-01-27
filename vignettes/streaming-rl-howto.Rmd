@@ -197,7 +197,8 @@ res.threefile <- multifileRL(geco_small[1:3],
 # PPRB-with-Transition Updates
 
 ```{r pprbwithtransition}
-true.links <- fromentities(geco_small[[1]]$entity, geco_small[[2]]$entity, geco_small[[3]]$entity)
+true.entities <- lapply(geco_small[1:3], function(x) x$entity)
+true.links <- do.call(fromentities, true.entities)
 
 res.pprbwt3 <- PPRBWTupdate(filtered, geco_small[[3]],
                             nIter.PPRB=200, burn=150, refresh=0.05,
