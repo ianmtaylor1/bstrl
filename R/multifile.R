@@ -50,7 +50,7 @@
 #' @export
 multifileRL <- function(files, flds=NULL, types=NULL, breaks=c(0,.25,.5),
                         nIter=1000, burn=round(nIter*.1), a=1, b=1, aBM=1, bBM=1,
-                        proposals=c("component", "LB"), blocksize=NULL, seed=0,
+                        proposals=c("component", "randomscan", "LB"), blocksize=NULL, seed=0,
                         refresh=0.1, maxtime=Inf) {
   stopifnot(length(files) >= 2)
   proposals <- match.arg(proposals)
@@ -100,7 +100,9 @@ multifileRL <- function(files, flds=NULL, types=NULL, breaks=c(0,.25,.5),
 
     for (f in seq(2, length(files))) {
       if (proposals == "component") {
-        slcurr <- draw.Z.componentwise(f, cmpdata, slcurr, mcurr, ucurr, aBM, bBM)
+        slcurr <- draw.Z.componentwise(f, cmpdata, slcurr, mcurr, ucurr, aBM, bBM, randomscan=FALSE)
+      } else if (proposals == "randomscan") {
+        slcurr <- draw.Z.componentwise(f, cmpdata, slcurr, mcurr, ucurr, aBM, bBM, randomscan=TRUE)
       } else if (proposals == "LB") {
         slcurr <- draw.Z.locbal(f, cmpdata, slcurr, mcurr, ucurr, aBM, bBM,
                                 blocksize=blocksize)
