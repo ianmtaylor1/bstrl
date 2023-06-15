@@ -11,7 +11,7 @@
 # Returns:
 #   a new state of streaming link object: potentially different in every single
 # component for this file
-draw.Z.componentwise <- function(file, cmpdata, sl, m, u, aBM, bBM) {
+draw.Z.componentwise <- function(file, cmpdata, sl, m, u, aBM, bBM, randomscan=FALSE) {
   stopifnot(file >= 2, file <= nfiles(sl))
 
   # Number of possibilities for each component to have
@@ -19,7 +19,12 @@ draw.Z.componentwise <- function(file, cmpdata, sl, m, u, aBM, bBM) {
 
   # Loop through doing the componentwise full conditional for all records in
   # the chosen file
-  for (rec in seq_len(sl$ns[file])) {
+  if (randomscan) {
+    comporder <- sample.int(sl$ns[file])
+  } else {
+    comporder <- seq_len(sl$ns[file])
+  }
+  for (rec in comporder) {
     globalrec <- local.to.global(sl$ns, file, rec)
     slbase <- unlink.down.gl(sl, globalrec)
 
