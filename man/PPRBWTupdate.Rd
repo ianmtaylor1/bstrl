@@ -10,6 +10,7 @@ PPRBWTupdate(
   flds = NULL,
   nIter.PPRB = NULL,
   burn = 0,
+  ensemblesize = NULL,
   blocksize = NULL,
   threestep = TRUE,
   refresh = 0.1,
@@ -34,8 +35,12 @@ if no global field names were specified in bipartiteRL initially.}
 \item{nIter.PPRB}{Number of iterations for which to run the PPRB sampler. By
 default, this is the same as the number of samples present in 'state'.}
 
-\item{burn}{Number of initial iterations to discard. The total number of
-samples returned is nIter - burn.}
+\item{burn}{Number of initial iterations to discard after the PPRB step.}
+
+\item{ensemblesize}{Number of samples to be used in the transition kernel
+updates. The nIter.PPRB - burn samples returned by the PPRB step are
+thinned to ensemblesize. The total number of samples returned by this
+function is ensemblesize. The default ensemblesize = nIter.PPRB - burn}
 
 \item{blocksize}{Size of blocks to use for locally balanced proposals.
 Default performs unblocked locally balanced proposals.}

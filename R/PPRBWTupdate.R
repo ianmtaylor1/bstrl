@@ -10,8 +10,11 @@
 #'   if no global field names were specified in bipartiteRL initially.
 #' @param nIter.PPRB Number of iterations for which to run the PPRB sampler. By
 #'   default, this is the same as the number of samples present in 'state'.
-#' @param burn Number of initial iterations to discard. The total number of
-#'   samples returned is nIter - burn.
+#' @param burn Number of initial iterations to discard after the PPRB step.
+#' @param ensemblesize Number of samples to be used in the transition kernel
+#'   updates. The nIter.PPRB - burn samples returned by the PPRB step are
+#'   thinned to ensemblesize. The total number of samples returned by this
+#'   function is ensemblesize. The default ensemblesize = nIter.PPRB - burn
 #' @param blocksize Size of blocks to use for locally balanced proposals.
 #'   Default performs unblocked locally balanced proposals.
 #' @param threestep Whether to perform three Gibbs sampling steps per iteration,
@@ -58,7 +61,8 @@
 #'                             blocksize=5)
 #' @export
 PPRBWTupdate <- function(state, newfile, flds = NULL,
-                         nIter.PPRB = NULL, burn = 0, blocksize = NULL,
+                         nIter.PPRB = NULL, burn = 0, ensemblesize=NULL,
+                         blocksize = NULL,
                          threestep = TRUE, refresh=0.1,
                          nIter.transition=10, proposals.transition=c("LB", "component"),
                          cores=1,
@@ -72,7 +76,12 @@ PPRBWTupdate <- function(state, newfile, flds = NULL,
                          threestep=threestep, seed=seed, refresh=refresh)
 
   # SMCMC transition kernel application starts here
-  ensemble <- list(m=postpprb$m, u=postpprb$u, Z=postpprb$Z)
+  if (!is.null(ensemblesize)) {
+    thinned <- thinsamples(postpprb, ensemblesize)
+  } else {
+    thinned <- postpprb
+  }
+  ensemble <- list(m=thinned$m, u=thinned$u, Z=thinned$Z)
 
   updated <- coreSMCMCupdate(ensemble, postpprb$priors, postpprb$files, postpprb$comparisons,
                              nIter.jumping=0, nIter.transition=nIter.transition,

@@ -2,18 +2,18 @@ Package: bstrl
 Title: Bayesian Streaming Record Linkage
 Version: 1.1.0
 Authors@R: c(
-    person(given = "Brenda",
-           family = "Betancourt",
-           role = c("aut"),
-           email = "bbetancourt@ufl.edu"),
+    person(given = "Ian",
+           family = "Taylor",
+           role = c("aut", "cre"),
+           email = "ian.taylor@colostate.edu"),
     person(given = "Andee",
            family = "Kaplan",
            role = c("aut"),
            email = "andee.kaplan@colostate.edu"),
-    person(given = "Ian",
-           family = "Taylor",
-           role = c("aut", "cre"),
-           email = "ian.taylor@colostate.edu")
+    person(given = "Brenda",
+           family = "Betancourt",
+           role = c("aut"),
+           email = "bbetancourt@ufl.edu")
     )
 Description: Perform record linkage on streaming files using recursive Bayesian updating.
 License: MIT + file LICENSE
